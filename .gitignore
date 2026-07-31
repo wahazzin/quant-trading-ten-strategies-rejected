@@ -1,0 +1,13 @@
+﻿# Secrets
+.env
+*.db
+trading.db
+venv/
+__pycache__/
+*.pyc
+data/*
+!data/universe_verification.csv
+!data/universe_expanded.csv
+.vscode/
+.claude/
+*.log
