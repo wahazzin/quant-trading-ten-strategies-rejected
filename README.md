@@ -1,10 +1,10 @@
-# Systematic Trading Research — Nine Strategies Tested, Nine Rejected
+# Systematic Trading Research — Ten Strategies Tested, Ten Rejected
 
-A complete, honestly-reported quantitative research record: nine trading strategies
+A complete, honestly-reported quantitative research record: ten trading strategies
 built, tested under pre-registered specifications, and rejected on the evidence.
 
 **This repository does not contain a profitable trading strategy.** It contains the
-apparatus that proved nine strategies weren't — including one that passed every
+apparatus that proved ten strategies weren't — including one that passed every
 robustness check before a sealed holdout killed it. That negative result, and the
 discipline that produced it, is the point.
 
@@ -49,6 +49,7 @@ report what you find. Every test here includes:
 | 7 | Momentum 12-1 | Alpha 0.56%, t = 0.13, beta 1.17 | Rejected |
 | 8 | **Low volatility (long-only)** | **Practice: alpha +4.23%, t = 2.47 → Holdout: alpha −5.60%, t = −1.62** | **Rejected in holdout** |
 | 9 | SEC 8-K event study | Effects real but ≈0.4% vs ≈0.63% round-trip cost at account size | Rejected |
+| 10 | Value (B/M) + Quality (gross profitability) | Value alpha +5.28% but t = 1.46; needs ~16yr of data, XBRL gives 8.5 | Rejected — underpowered |
 
 Full details, statistics, and reasoning for each: **[`RESEARCH_LOG.md`](RESEARCH_LOG.md)**
 Current status and decision framework: **[`ROADMAP.md`](ROADMAP.md)**

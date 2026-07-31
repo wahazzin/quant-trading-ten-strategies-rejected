@@ -120,11 +120,59 @@ yfinance sample** (final universe used for all factor tests, `data/yf_universe.p
 
 ---
 
+## Test 9 — SEC 8-K event study — **REJECTED** (real but uneconomic)
+- Scripts: `event_study.py` (v1, confounded), `event_study_v2.py` (corrected); data via `fetch_edgar_cik_map.py`, `fetch_edgar_8k_bulk.py`, `fetch_edgar_8k_fill_gaps.py`
+- Universe: 1,807 filers, 124,419 events with usable forward-return windows, 2019-01 onward
+- **v1 methodology error, caught and corrected:** abnormal return was defined as stock return minus SPY return. Our universe underperformed SPY by ~5%/yr as a baseline, so the apparent "event effect" was largely the size premium running backwards. v2 replaced the benchmark with a matched non-event control (each stock's own mean forward return from days not within 20 trading days after any of its 8-K filings), differencing out idiosyncratic drift without a market benchmark.
+- v2 pooled result: only the 10-day horizon significant (mean adjusted AR **-0.171%**, t=**-2.77**) — below the 0.2% round-trip cost bar.
+- Best item code: **5.02** (executive/director departures), 10d **-0.406%** (t=-3.14), 20d **-0.412%** (t=-2.25) — clears the cost bar on paper.
+- **Economic reality check at account size:** ~$470 position (50k SEK ÷ 10) → $2 commission = 0.43% + ~0.20% spread = **0.63% total cost vs 0.41% edge. Net negative before the signal even has to be real.** Would require ~200,000 SEK to become marginally economic.
+- Size hypothesis **reversed**: the well-covered (high dollar-volume) half showed stronger and more persistent effects than the under-covered half — the opposite of the project's original small-cap edge thesis.
+- Caveat: t-statistics are inflated by event clustering (8-Ks bunch in earnings season, so overlapping 20-day windows are far from independent) and by a control-group selection issue (frequent filers have few "clean" days, so their baseline is drawn from unusually quiet periods).
+- Verdict: effects are real but too small to trade at this account size, and the methodology has unresolved confounds. Rejected.
+
+## Test 10 — Value (Book-to-Market) + Quality (Gross Profitability) — **REJECTED** (underpowered, not disproven)
+- Scripts: `fetch_edgar_fundamentals.py`, `fundamental_test.py`
+- Data: SEC EDGAR XBRL bulk `companyfacts.zip` (1.30 GB), 1,043,209 fact-rows, 1,981/2,339 companies matched, filed dates 2009-04 onward
+- **Lookahead protection:** every fact carries both its fiscal `end` date and its `filed` date; a fact is only usable from its filed date onward. Annual June formation, held 12 months, monthly returns measured on the fixed portfolio.
+- Practice window 2010-06 to 2018-06 — 9 annual rebalances, 102 monthly observations
+
+| | Value (B/M) | Quality (Gross Profitability) |
+|---|---|---|
+| Avg stocks/decile | 20.7 ⚠️ | 13.8 ⚠️ |
+| Gross annualized | 20.78% | 14.15% |
+| Net 0.2% + $1/order | 20.16% | 13.73% |
+| Sharpe (fully net) | 1.18 | 0.81 |
+| Beta | 1.154 | 0.979 |
+| Annualized alpha | **+5.28%** | +1.94% |
+| t-stat on alpha | **1.46** | 0.39 |
+
+- Quality: rejected outright — t=0.39, and the long decile (14.15%) underperformed the equal-weighted universe (16.55%).
+- Value: alpha is economically meaningful but misses the pre-registered t>2 bar. **Power analysis: detecting a 5.28% alpha at this noise level requires ~192 monthly observations (~16 years). We have 102**, because XBRL tagging only phased in ~2009–2011. This is a hard data ceiling, not a fixable effort problem.
+- Both deciles fall below the 25-stock trust threshold set in advance for this run.
+- Verdict: rejected per pre-registration. Value is **unresolvable with available data** rather than disproven — the threshold was not loosened after seeing the result.
+
+---
+
+## Evidence-boundary status — IMPORTANT
+
+**No untouched window remains in this dataset.** 2019+ was spent on the Test 8 low-volatility holdout, then used again as the Test 9 event-study analysis window. Pre-2019 served as the practice window for Tests 7, 8, and 10.
+
+Beyond the data itself, the *designer* is contaminated: facts now known about 2019–2026 (SPY returned 16.77%/yr, low-volatility inverted, growth dominated value) inevitably leak into how any further test would be specified. **Any additional testing on this dataset is data-mining, regardless of how carefully the code is written.**
+
+Resuming this research requires new data — see `ROADMAP.md` Section 8 for the two specific triggers.
+
+---
+
 ## Bottom line
 
-Every signal or factor tested in this project — SMA crossover, RSI mean-reversion,
-20-day z-score reversal (13 and 36-stock universes, both time-series and
-cross-sectional formulations), momentum 12-1, and low-volatility — has been
-rejected, either in-sample or, for low-volatility, in the one-shot holdout after
-initially passing every practice-window check. No signal from this research
-program is currently validated for live trading.
+Ten hypothesis classes tested — SMA crossover, RSI mean-reversion, 20-day z-score
+reversal (13 and 36-stock universes, both time-series and cross-sectional
+formulations), momentum 12-1, low-volatility, SEC 8-K material events, and
+fundamental value/quality — and every one rejected, either in-sample, in the
+one-shot holdout after passing every practice-window check (low-volatility), on
+economic grounds after clearing statistical ones (8-K events), or on
+sample-size grounds that the available data cannot fix (value).
+
+No signal from this research program is validated for live trading, and the
+dataset can no longer support an honest eleventh test.
