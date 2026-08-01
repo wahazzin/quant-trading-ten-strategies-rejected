@@ -261,8 +261,8 @@ Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (e
 - **Check 5 (implementation, using the declustered rate/size as the honest base case):** ~6.13 negative shocks/year on a 20-stock equal-weighted portfolio (the live value portfolio's size), net benefit per event **+0.14%** after the 0.63% round-trip cost, working out to **+0.04 percentage points/year at the whole-portfolio level** — negligible even setting aside that Check 1 already fails significance.
 - **Final verdict: does NOT survive.** 2 of 4 adversarial checks fail outright, and one of the two failures (independence) is disqualifying by itself — a genuinely tradeable signal must be significant on correctly-counted independent observations, and this isn't. The other failure (liquidity) independently confirms it wouldn't be tradeable at real size even if it were. **Rejected — this does not reach a risk-filter layer on the live value portfolio.** No shock threshold, tercile cut, or additional horizon was altered to produce this conclusion.
 
-## Test 15 — Volatility targeting (Moreira & Muir 2017) — **PRACTICE WINDOW: Sharpe improvement present, not statistically significant — HOLDOUT UNTOUCHED**
-- Script: `vol_target_test.py`
+## Test 15 — Volatility targeting (Moreira & Muir 2017) — **PASSED practice window → DIED in holdout (FINAL)**
+- Scripts: `vol_target_test.py` (practice), `vol_target_holdout_test.py` (holdout, one-shot)
 - Different in kind from Tests 1–14: times exposure to the market rather than predicting direction. Disputed in the literature — Cederburg et al. found it fails out-of-sample for most factors. Prior was low going in; the project's record was 0/14.
 - Data: SPY daily history from inception (1993-01-29), fetched fresh via yfinance — the deepest history used anywhere in this project (8,433 raw rows), specifically to span multiple volatility regimes (dot-com crash, 2008 financial crisis).
 - Spec (fixed, no variants): monthly rebalance at the open, exposure = 15% target vol ÷ trailing-21-day realized vol, capped [0, 1.5×], 5%/yr margin cost on the borrowed portion, 0.05% round-trip cost on the exposure change.
@@ -279,7 +279,38 @@ Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (e
 - **Sharpe(vol-targeted)/Sharpe(SPY) = 1.217; Sharpe(vol-targeted)/Sharpe(constant leverage at the same average exposure) = 1.244.** The improvement beats a same-average-leverage benchmark too, not just plain SPY — meaning it isn't just "this exposure level happened to do well," it's specifically attributable to varying exposure over time, which is the actual Moreira & Muir claim (Sharpe ratio is leverage-invariant in the textbook case; only time-varying exposure should move it).
 - Max drawdown improved substantially (-39% vs -51%) — consistent with the mechanism: exposure gets cut during high-vol regimes like 2008, exactly when drawdowns are worst.
 - **Alpha regression** (vol-targeted, net of costs, vs SPY, monthly): beta **0.771**, annualized alpha **+2.26%**, R²=0.820, **t=1.59** — positive, but does not clear this project's t>2 significance bar.
-- Verdict: **the first result in fifteen tests where the Sharpe-ratio comparison (the actual claim under test) holds up against two separate honest baselines** — but the formal alpha t-stat, on the largest sample in this project, is not significant at the conventional threshold. Positive, not proven — the same standard applied to every other borderline result here (Fugazzi t=1.56, Swedish t=0.56/0.37, Test 10 Value t=1.52). **The 2010+ holdout was not read anywhere in this script and remains sealed.** Whether to spend it on this one result is a deliberate, one-shot decision (see Test 8's precedent) — not made here.
+- Practice-window verdict at the time: the first result in fifteen tests where the Sharpe-ratio comparison held up against two separate honest baselines, but alpha t=1.59 fell short of significance — positive, not proven, same as Fugazzi and the Swedish retest.
+
+**Pre-registered holdout decision rule (fixed before running, binding):** Sharpe ratio ≥1.15× SPY AND alpha t>2 → SURVIVED. Sharpe ratio ≥1.15× SPY but t between 1 and 2 → CONSISTENT, not proven. Sharpe ratio <1.10× SPY, or negative alpha → DEAD.
+
+**HOLDOUT (`vol_target_holdout_test.py`, 2010-01 to 2026-07, one-shot, 196 monthly observations):**
+
+| Metric | Practice (1993–2009) | Holdout (2010–present) |
+|---|---|---|
+| Total return | 268.15% | 661.72% |
+| Annualized return | 8.13% | 13.24% |
+| Sharpe | 0.66 | **0.95** |
+| Max drawdown | -39.03% | -19.07% |
+| Avg exposure | 103.6% | 114.5% |
+| Alpha (annualized) | +2.26% | **+0.76%** |
+| Alpha t-stat | 1.59 | **0.51** |
+| Sharpe ratio vs SPY | 1.217 | **0.970** |
+
+- SPY itself had a stronger holdout than the vol-targeted strategy on every raw metric (Sharpe 0.98 vs the strategy's 0.95) — the vol-targeted Sharpe RATIO versus SPY fell **below 1.0**, meaning the strategy no longer even matched SPY's risk-adjusted return, let alone beat it. Alpha collapsed from +2.26%/yr (t=1.59) to +0.76%/yr (t=0.51) — indistinguishable from zero.
+- **Mechanical verdict per the pre-registered rule: DEAD** (Sharpe ratio 0.970 < 1.10 threshold).
+- **COVID sub-period (2020-02 to 2020-06), the fastest crash in the holdout — and the clearest illustration of the failure mode:**
+
+| Month | Exposure | Vol-targeted return | SPY return | Difference |
+|---|---|---|---|---|
+| 2020-02 | 123.3% | -9.69% | -7.77% | -1.92pp |
+| 2020-03 | 61.7% | -10.12% | -16.35% | +6.24pp |
+| 2020-04 | 16.6% | +2.48% | +15.05% | -12.57pp |
+| 2020-05 | 37.1% | +2.37% | +6.42% | -4.05pp |
+| 2020-06 | 67.5% | +1.61% | +2.41% | -0.80pp |
+
+Cumulative Feb–Jun 2020: vol-targeted **-13.47%** vs SPY **-3.27%** (-10.20pp underperformance) — during exactly the period the strategy was supposed to protect against. The mechanism is visible directly in the table: exposure entered February 2020 at **123.3%** (near the 1.5× cap), because it was set from January 2020's calm, pre-crash realized vol — the 21-day monthly-rebalanced lookback structurally cannot react until the vol spike itself shows up in a month-end reading, one month late. It then overcorrected: by April, exposure was cut to **16.6%**, missing most of SPY's sharp rebound (+15.05% vs the strategy's +2.48%). Over-levered into the crash, under-levered into the recovery — the worst of both timing errors, back to back.
+- **Plain-English conclusion: the effect died out of sample**, the same outcome as low-volatility (Test 8). The COVID window shows precisely why a monthly-rebalanced, 21-day-lookback implementation of this idea fails exactly when it matters most: V-shaped crashes are faster than the lookback can track, in both directions.
+- **FINAL VERDICT: REJECTED.** Fifteen for fifteen. Final validation run — no iteration, no anomaly investigation, no follow-up variants were run after seeing this result, per the pre-registered instruction.
 
 ---
 
@@ -300,34 +331,34 @@ z-score reversal (13 and 36-stock universes, both time-series and
 cross-sectional formulations), momentum 12-1, low-volatility, SEC 8-K material
 events, fundamental value/quality, two independent CAPM stock-picking retests
 (Fugazzi, Swedish ADRs), a pooled news-sentiment IC scan, a conditional
-shock-day sentiment test, and volatility targeting. Fourteen of the fifteen
-were rejected as a tradeable edge, either in-sample, in the one-shot holdout
-after passing every practice-window check (low-volatility), on economic
-grounds after clearing statistical ones (8-K events), on sample-size grounds
-that the available data cannot fix (value), on significance grounds despite a
-positive point estimate (Fugazzi, Swedish), as a clean null (pooled sentiment
-IC), or as real-but-not-actually-about-sentiment once decomposed (Test 14's
-20-day pattern tracked news attention generally, not sentiment direction,
-once checked against the positive-sentiment bucket), or as a significant-
-looking result that failed to survive adversarial robustness checks (Test
-14's 1-day sentiment-direction effect lost significance once clustered shock
-days were properly declustered, and separately showed no effect at all in
-liquid, tradeable names).
+shock-day sentiment test, and volatility targeting. **All fifteen were
+rejected as a tradeable edge** — either in-sample, in a one-shot holdout
+after passing every practice-window check (low-volatility, and now
+volatility targeting too), on economic grounds after clearing statistical
+ones (8-K events), on sample-size grounds that the available data cannot fix
+(value), on significance grounds despite a positive point estimate (Fugazzi,
+Swedish), as a clean null (pooled sentiment IC), as real-but-not-actually-
+about-sentiment once decomposed (Test 14's 20-day pattern tracked news
+attention generally, not sentiment direction), or as a significant-looking
+result that failed adversarial robustness checks (Test 14's 1-day
+sentiment-direction effect) or a sealed holdout (Test 15's volatility
+targeting — passed every practice-window comparison, then a Sharpe ratio
+that fell below 1.0 and an alpha t-stat that collapsed from 1.59 to 0.51 in
+2010–present, with the COVID sub-period showing exactly why: a 21-day,
+monthly-rebalanced lookback enters a V-shaped crash over-levered and exits
+it under-levered, one month late in both directions).
 
-**Test 15 (volatility targeting) is the one exception, and it is explicitly
-NOT a validated result — it is an open practice-window finding with a sealed
-holdout.** Sharpe improved over both plain SPY and a same-average-leverage
-benchmark on the largest sample in this project (n=200 monthly
-observations), but the formal alpha t-stat (1.59) does not clear this
-project's own significance bar. It sits in the same "positive but not proven"
-category as Fugazzi and the Swedish retest, with one difference: unlike
-those, its holdout has not been touched. Whether to spend that one-shot
-holdout is a decision for the user, not something this log resolves on its
-own — see Test 15's entry for the precedent Test 8 set on why that decision
-is treated as consequential.
+Two of fifteen tests (low-volatility, volatility targeting) reached the same
+pattern: real, statistically meaningful practice-window results that did not
+survive being tested on data the designer had never seen. That recurrence is
+itself the strongest finding of this entire program — it is exactly why the
+holdout discipline exists, and exactly why "it worked in backtest" was never
+treated as sufficient here.
 
 No signal from this research program is validated for live trading. The
 original backtest dataset (Tests 1–10) can no longer support an honest new
 test on it; Tests 11–15 used independent, freshly-sourced data (fresh
 per-ticker yfinance pulls, Alpaca news, SPY history from 1993) specifically
 to keep generating uncontaminated evidence after that boundary was reached.
+Every holdout this project has spent — Test 8 and now Test 15 — has told the
+same story: it does not carry over.
