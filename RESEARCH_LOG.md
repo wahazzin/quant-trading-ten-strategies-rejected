@@ -261,6 +261,26 @@ Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (e
 - **Check 5 (implementation, using the declustered rate/size as the honest base case):** ~6.13 negative shocks/year on a 20-stock equal-weighted portfolio (the live value portfolio's size), net benefit per event **+0.14%** after the 0.63% round-trip cost, working out to **+0.04 percentage points/year at the whole-portfolio level** — negligible even setting aside that Check 1 already fails significance.
 - **Final verdict: does NOT survive.** 2 of 4 adversarial checks fail outright, and one of the two failures (independence) is disqualifying by itself — a genuinely tradeable signal must be significant on correctly-counted independent observations, and this isn't. The other failure (liquidity) independently confirms it wouldn't be tradeable at real size even if it were. **Rejected — this does not reach a risk-filter layer on the live value portfolio.** No shock threshold, tercile cut, or additional horizon was altered to produce this conclusion.
 
+## Test 15 — Volatility targeting (Moreira & Muir 2017) — **PRACTICE WINDOW: Sharpe improvement present, not statistically significant — HOLDOUT UNTOUCHED**
+- Script: `vol_target_test.py`
+- Different in kind from Tests 1–14: times exposure to the market rather than predicting direction. Disputed in the literature — Cederburg et al. found it fails out-of-sample for most factors. Prior was low going in; the project's record was 0/14.
+- Data: SPY daily history from inception (1993-01-29), fetched fresh via yfinance — the deepest history used anywhere in this project (8,433 raw rows), specifically to span multiple volatility regimes (dot-com crash, 2008 financial crisis).
+- Spec (fixed, no variants): monthly rebalance at the open, exposure = 15% target vol ÷ trailing-21-day realized vol, capped [0, 1.5×], 5%/yr margin cost on the borrowed portion, 0.05% round-trip cost on the exposure change.
+- Practice window 1993 through 2009-12 — **200 usable monthly observations, the largest sample of any test in this project.**
+
+| | Vol-targeted | SPY buy&hold | Constant leverage (avg 103.6%) |
+|---|---|---|---|
+| Total return | 268.15% | 230.00% | 231.55% |
+| Annualized | 8.13% | 7.43% | 7.46% |
+| Sharpe | **0.66** | 0.54 | 0.53 |
+| Max drawdown | **-39.03%** | -51.30% | -52.76% |
+
+- Average exposure 103.6%, average monthly turnover 18.7pp — small, as expected for a monthly single-instrument strategy.
+- **Sharpe(vol-targeted)/Sharpe(SPY) = 1.217; Sharpe(vol-targeted)/Sharpe(constant leverage at the same average exposure) = 1.244.** The improvement beats a same-average-leverage benchmark too, not just plain SPY — meaning it isn't just "this exposure level happened to do well," it's specifically attributable to varying exposure over time, which is the actual Moreira & Muir claim (Sharpe ratio is leverage-invariant in the textbook case; only time-varying exposure should move it).
+- Max drawdown improved substantially (-39% vs -51%) — consistent with the mechanism: exposure gets cut during high-vol regimes like 2008, exactly when drawdowns are worst.
+- **Alpha regression** (vol-targeted, net of costs, vs SPY, monthly): beta **0.771**, annualized alpha **+2.26%**, R²=0.820, **t=1.59** — positive, but does not clear this project's t>2 significance bar.
+- Verdict: **the first result in fifteen tests where the Sharpe-ratio comparison (the actual claim under test) holds up against two separate honest baselines** — but the formal alpha t-stat, on the largest sample in this project, is not significant at the conventional threshold. Positive, not proven — the same standard applied to every other borderline result here (Fugazzi t=1.56, Swedish t=0.56/0.37, Test 10 Value t=1.52). **The 2010+ holdout was not read anywhere in this script and remains sealed.** Whether to spend it on this one result is a deliberate, one-shot decision (see Test 8's precedent) — not made here.
+
 ---
 
 ## Evidence-boundary status — IMPORTANT
@@ -275,27 +295,39 @@ Resuming this research requires new data — see `ROADMAP.md` Section 8 for the 
 
 ## Bottom line
 
-Fourteen hypothesis classes tested — SMA crossover, RSI mean-reversion, 20-day
+Fifteen hypothesis classes tested — SMA crossover, RSI mean-reversion, 20-day
 z-score reversal (13 and 36-stock universes, both time-series and
 cross-sectional formulations), momentum 12-1, low-volatility, SEC 8-K material
 events, fundamental value/quality, two independent CAPM stock-picking retests
-(Fugazzi, Swedish ADRs), a pooled news-sentiment IC scan, and a conditional
-shock-day sentiment test — and every one rejected as a tradeable edge, either
-in-sample, in the one-shot holdout after passing every practice-window check
-(low-volatility), on economic grounds after clearing statistical ones (8-K
-events), on sample-size grounds that the available data cannot fix (value),
-on significance grounds despite a positive point estimate (Fugazzi, Swedish),
-as a clean null (pooled sentiment IC), or as real-but-not-actually-about-
-sentiment once decomposed (Test 14's 20-day pattern tracked news attention
-generally, not sentiment direction, once checked against the positive-
-sentiment bucket), or as a significant-looking result that failed to survive
-adversarial robustness checks (Test 14's 1-day sentiment-direction effect —
-the one candidate in this program that reached a formal five-check gauntlet
-— lost significance once clustered shock days were properly declustered,
-and separately showed no effect at all in liquid, tradeable names).
+(Fugazzi, Swedish ADRs), a pooled news-sentiment IC scan, a conditional
+shock-day sentiment test, and volatility targeting. Fourteen of the fifteen
+were rejected as a tradeable edge, either in-sample, in the one-shot holdout
+after passing every practice-window check (low-volatility), on economic
+grounds after clearing statistical ones (8-K events), on sample-size grounds
+that the available data cannot fix (value), on significance grounds despite a
+positive point estimate (Fugazzi, Swedish), as a clean null (pooled sentiment
+IC), or as real-but-not-actually-about-sentiment once decomposed (Test 14's
+20-day pattern tracked news attention generally, not sentiment direction,
+once checked against the positive-sentiment bucket), or as a significant-
+looking result that failed to survive adversarial robustness checks (Test
+14's 1-day sentiment-direction effect lost significance once clustered shock
+days were properly declustered, and separately showed no effect at all in
+liquid, tradeable names).
+
+**Test 15 (volatility targeting) is the one exception, and it is explicitly
+NOT a validated result — it is an open practice-window finding with a sealed
+holdout.** Sharpe improved over both plain SPY and a same-average-leverage
+benchmark on the largest sample in this project (n=200 monthly
+observations), but the formal alpha t-stat (1.59) does not clear this
+project's own significance bar. It sits in the same "positive but not proven"
+category as Fugazzi and the Swedish retest, with one difference: unlike
+those, its holdout has not been touched. Whether to spend that one-shot
+holdout is a decision for the user, not something this log resolves on its
+own — see Test 15's entry for the precedent Test 8 set on why that decision
+is treated as consequential.
 
 No signal from this research program is validated for live trading. The
 original backtest dataset (Tests 1–10) can no longer support an honest new
-test on it; Tests 11–14 used independent, freshly-sourced data (fresh
-per-ticker yfinance pulls, Alpaca news) specifically to keep generating
-uncontaminated evidence after that boundary was reached.
+test on it; Tests 11–15 used independent, freshly-sourced data (fresh
+per-ticker yfinance pulls, Alpaca news, SPY history from 1993) specifically
+to keep generating uncontaminated evidence after that boundary was reached.
