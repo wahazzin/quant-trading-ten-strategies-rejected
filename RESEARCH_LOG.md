@@ -139,18 +139,45 @@ yfinance sample** (final universe used for all factor tests, `data/yf_universe.p
 
 | | Value (B/M) | Quality (Gross Profitability) |
 |---|---|---|
-| Avg stocks/decile | 20.7 ⚠️ | 13.8 ⚠️ |
-| Gross annualized | 20.78% | 14.15% |
-| Net 0.2% + $1/order | 20.16% | 13.73% |
-| Sharpe (fully net) | 1.18 | 0.81 |
-| Beta | 1.154 | 0.979 |
-| Annualized alpha | **+5.28%** | +1.94% |
-| t-stat on alpha | **1.46** | 0.39 |
+| Avg stocks/decile | 20.4 ⚠️ | 13.8 ⚠️ |
+| Gross annualized | 21.15% | 14.15% |
+| Net 0.2% + $1/order | 20.55% | 13.73% |
+| Sharpe (fully net) | 1.20 | 0.81 |
+| Beta | 1.159 | 0.979 |
+| Annualized alpha | **+5.55%** | +1.94% |
+| t-stat on alpha | **1.52** | 0.39 |
 
 - Quality: rejected outright — t=0.39, and the long decile (14.15%) underperformed the equal-weighted universe (16.55%).
-- Value: alpha is economically meaningful but misses the pre-registered t>2 bar. **Power analysis: detecting a 5.28% alpha at this noise level requires ~192 monthly observations (~16 years). We have 102**, because XBRL tagging only phased in ~2009–2011. This is a hard data ceiling, not a fixable effort problem.
+- Value: alpha is economically meaningful but misses the pre-registered t>2 bar. **Power analysis: detecting a ~5.5% alpha at this noise level requires ~192 monthly observations (~16 years). We have 102**, because XBRL tagging only phased in ~2009–2011. This is a hard data ceiling, not a fixable effort problem.
 - Both deciles fall below the 25-stock trust threshold set in advance for this run.
 - Verdict: rejected per pre-registration. Value is **unresolvable with available data** rather than disproven — the threshold was not loosened after seeing the result.
+
+**Data-integrity correction (found building the Phase 6 forward test, applied retroactively):**
+`us-gaap:CommonStockSharesOutstanding` is unreliable for a meaningful slice of filers — Up-C/holding-company registrants, foreign private issuers on 20-F/6-K, and redomiciled entities sometimes tag a technical share class rather than total float (e.g. SPG showed "8,000 shares" against a real ~325M-share count; several current-day top-B/M picks showed ratios in the hundreds of thousands, an impossibility for a real company). Fixed with a data-integrity floor in `value_signal`: reject any observation where shares outstanding is smaller than one day's average trading volume (implied >100%/day turnover is not economically plausible). Re-running the historical backtest with this fix barely moved the numbers — annualized alpha **+5.28% → +5.55%**, t-stat **1.46 → 1.52**, decile size 20.7 → 20.4 — so the original verdict stands; the bug happened not to contaminate the historical top-decile picks materially. It DID materially corrupt live/current-day ranking (see Phase 6 section below), which is why it was caught before being traded rather than after.
+
+---
+
+## Phase 6 — Forward Test (Value / Book-to-Market) — IN PROGRESS
+
+**Start date:** 2026-07-31 — specification locked and 20 buy orders submitted same day. Markets were closed at submission time; orders were placed GTC and are resting (`PreSubmitted`), expected to fill at the next market open (2026-08-03). Inception equity and SPY baseline are captured by `ops/value_rebalance.py` only once real capital is confirmed deployed (an actual fill observed, or a pre-existing position found) — not merely on order submission — so the forward-test clock starts from real exposure, not paperwork.
+
+**Why forward, not more backtesting:** Value (B/M) is the one unresolved candidate from Test 10 — alpha **+5.55%/yr** (post data-integrity fix below), t=**1.52**, economically meaningful but statistically underpowered (102 monthly observations vs the ~192 needed). The backtest dataset is fully spent (see Evidence-Boundary section below). Forward testing from today onward is the only remaining source of uncontaminated evidence.
+
+**Exact specification (fixed as of today):**
+- Universe: same filters as `fundamental_test.py` (price $5–100, monthly avg daily volume > 250,000, 24+ months history), applied to `data/yf_universe.parquet`'s latest available month.
+- Signal: Book-to-Market = StockholdersEquity ÷ (price × CommonStockSharesOutstanding), using only fundamental facts filed by the rebalance date, with the data-integrity floor (shares outstanding ≥ one day's average volume).
+- Selection: **top 20 by B/M** — a deliberate, pre-registered deviation from the backtest's ~20-stock decile, sized for this account's commission drag (Test 8: 4.04%/yr at 38 stocks vs 2.50%/yr at 20).
+- Weighting: equal-weighted, ~90% of account equity invested (~10% cash buffer).
+- Rebalance: annual, each June, held fixed for 12 months — identical mechanics to the backtest.
+- Constraint: individual US common stocks only. PRIIPs/KID blocks ETF purchases on this account (confirmed by SPY's IBKR error 201 rejection during Phase 6 infrastructure validation) — immaterial here since Value is a stock-selection strategy, not an index proxy.
+
+**Benchmark:** SPY total return over the identical window, tracked as a reference number via IBKR historical data (`ops/value_report.py`) — never bought, never held, because it can't be on this account.
+
+**Success criterion:** the portfolio beats SPY, net of all costs (0.2% + $1/order commissions), over a multi-year horizon — specifically once ~192 monthly observations accumulate (~16 years at 12 monthly readings/year), the same power threshold the backtest fell short of. Interim monthly readings before that point are informative but not conclusive, and `ops/value_report.py` reports them as such every time.
+
+**Commitment:** this specification — universe filters, B/M definition, top-20 cut, equal-weighting, the 90% equity target, and the annual June rebalance — is fixed as of 2026-07-31 and will not be modified in response to interim results. Changing methodology after seeing forward-test performance would reintroduce exactly the data-mining risk this whole research program has spent ten backtests learning to avoid.
+
+Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (execute), `ops/value_report.py` (monthly tracking, since-inception performance, running observation count).
 
 ---
 

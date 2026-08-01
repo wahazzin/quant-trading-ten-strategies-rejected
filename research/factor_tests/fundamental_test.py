@@ -271,7 +271,7 @@ def build_formations(value_col_fn, long_is_high_signal=True):
             ticker_facts = facts_by_ticker.get(row.ticker)
             if ticker_facts is None:
                 continue
-            sig = value_col_fn(row.ticker, ticker_facts, formation_date, row.close)
+            sig = value_col_fn(row.ticker, ticker_facts, formation_date, row.close, row.avg_volume)
             if sig is not None and np.isfinite(sig):
                 signals.append((row.ticker, sig))
 
@@ -292,16 +292,27 @@ def build_formations(value_col_fn, long_is_high_signal=True):
     return records
 
 
-def value_signal(ticker, ticker_facts, cutoff, price):
+def value_signal(ticker, ticker_facts, cutoff, price, avg_volume):
     be = latest_known_value(ticker_facts, "StockholdersEquity", cutoff)
     shares = latest_known_value(ticker_facts, "CommonStockSharesOutstanding", cutoff)
     if be is None or shares is None or shares <= 0 or price <= 0 or be <= 0:
         return None  # negative/zero book equity excluded -- standard B/M convention
+    if shares < avg_volume:
+        # Data-integrity floor, discovered building the Phase 6 forward test:
+        # us-gaap:CommonStockSharesOutstanding is unreliable for a meaningful
+        # slice of filers (Up-C/holdco registrants, foreign private issuers on
+        # 20-F/6-K, redomiciled entities) -- it sometimes tags a technical
+        # share class rather than total float (e.g. SPG "8,000 shares" against
+        # a real ~325M share count). A share count smaller than one day's
+        # average trading volume implies >100% daily turnover, which is not
+        # economically plausible for a real company -- this rejects the
+        # artifact rather than computing a meaningless B/M ratio from it.
+        return None
     market_cap = price * shares
     return be / market_cap
 
 
-def quality_signal(ticker, ticker_facts, cutoff, price):
+def quality_signal(ticker, ticker_facts, cutoff, price, avg_volume):
     assets = latest_known_value(ticker_facts, "Assets", cutoff)
     if assets is None or assets <= 0:
         return None
