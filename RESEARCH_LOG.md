@@ -214,7 +214,7 @@ Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (e
 
 - Verdict: zero of 4 horizons clear |t|>2 on either measure — a flat null, not a close call. No detectable AVERAGE relationship between news sentiment and forward returns. Rejected.
 
-## Test 14 — Conditional shock-day sentiment test — **MIXED: attention effect found, but not sentiment-specific; one bucket clears cost, with an important caveat**
+## Test 14 — Conditional shock-day sentiment test — **REJECTED** (attention effect found but not sentiment-specific; the one sentiment-direction result failed independence/liquidity robustness checks)
 - Scripts: `fetch_alpaca_news_wide.py`, `sentiment_shock_test.py`
 - **Motivation:** Test 13 measured the AVERAGE effect across every day and came back null — but pooling dilutes toward zero any effect concentrated in rare high-impact events, by construction. This asks the conditional question Test 13's design cannot answer: does sentiment predict returns specifically when something significant happens?
 - **Wider universe (Task 1):** 100 tickers randomly sampled (seed 42) from `data/yf_universe.parquet`, headlines+dates only, 2021 to present — 20,379 articles, 87/100 tickers with coverage, median 113 articles/ticker (far more balanced than Test 13's GOOGL/NVDA-dominated set; AMC was the max at 4,191).
@@ -239,7 +239,27 @@ Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (e
 
 - The 20-day negative-shock-vs-unconditional result is statistically significant and numerically large enough to clear the round-trip cost floor. **However, given Task 3's finding that the SAME 20-day negative drift also appears after positive-sentiment shocks, this result cannot be cleanly attributed to sentiment direction** — it may just be "this stock had an unusual news event," full stop, rather than "the news was bad." Treating this as a validated sentiment-based exit rule would overstate what was actually shown.
 - **Sample-size honesty (Task 5):** every bucket cleared the 100-event floor (594 per tercile, 1,782 pooled) — none of the above is underpowered.
-- Verdict: a real, well-powered, multi-bucket-consistent attention/shock effect exists at the 20-day horizon (not a multiple-testing artifact — 4 of 4 Task-3 buckets agree in sign and 3 of 4 clear |t|>2 at that one horizon). It is NOT cleanly a sentiment-direction effect, which is what this test set out to check. No strategy was built, no shock threshold was tuned, and no bucket was selected as "best" — every specified bucket is reported above, including the ones that don't help the "sentiment predicts returns" story.
+- Interim verdict: the 20-day pattern is an attention effect, not a sentiment-direction effect (see above). The 1-day horizon was the one place sentiment direction showed up cleanly (negative tercile t=-3.94, positive tercile t=0.28) — that result was carried forward to a dedicated robustness check rather than accepted at face value.
+
+**Robustness check on the 1-day effect (five adversarial tests, script: `sentiment_shock_robustness.py`), reconstructed from cached data, no refetching/rescoring, tercile cutoffs and shock threshold held fixed throughout:**
+
+| Check | n | Mean | t-stat | Result |
+|---|---|---|---|---|
+| Original (unrestricted) | 589 | -1.725% | -4.02 | baseline |
+| 1. Declustered (≥10 trading days apart per ticker) | 335 | -0.769% | **-1.60** | **FAILS** |
+| 2. Liquid half (60d $ volume, median split) | 266 | -0.184% | **-0.34** | **FAILS** |
+| 2. Illiquid half | 298 | -2.136% | -3.49 | (survives, but untradeable) |
+| 3. Ex-meme (AMC/SCHW/SE/VST/GH excluded) | 417 | -2.250% | -4.40 | survives |
+| 4. Volatility-matched baseline (same ticker, same vol tercile) | 564 | -1.274% | -3.05 | survives (weaker) |
+
+(Small ~1% drift in n/mean vs. the table above this line is a reproducibility artifact — a handful of shock days in the last few days of the fetched news window fall after the price panel's data cutoff and get excluded slightly differently by the two scripts. It doesn't change any conclusion.)
+
+- **Check 1 (independence) is decisive on its own:** most of the original t=-3.94 significance was pseudo-replication — clustered, non-independent shock days (a company gets a burst of headlines, not one isolated article) were being counted as separate draws. Properly declustered, the effect nearly halves and loses significance (t=-1.60).
+- **Check 2 (liquidity) independently confirms it isn't tradeable:** the liquid half shows essentially nothing (t=-0.34); whatever raw signal exists lives entirely in illiquid names.
+- **Check 3 (meme contamination) is not the explanation** — excluding the 5 most-covered tickers *strengthens* the effect, meaning meme-stock noise was diluting it, not causing it.
+- **Check 4 (volatility control)** shows a real, weaker residual effect after controlling for the fact that shock days are higher-volatility days generally (t=-4.02 → -3.05) — some of the raw effect, but not all of it, was just a volatility artifact.
+- **Check 5 (implementation, using the declustered rate/size as the honest base case):** ~6.13 negative shocks/year on a 20-stock equal-weighted portfolio (the live value portfolio's size), net benefit per event **+0.14%** after the 0.63% round-trip cost, working out to **+0.04 percentage points/year at the whole-portfolio level** — negligible even setting aside that Check 1 already fails significance.
+- **Final verdict: does NOT survive.** 2 of 4 adversarial checks fail outright, and one of the two failures (independence) is disqualifying by itself — a genuinely tradeable signal must be significant on correctly-counted independent observations, and this isn't. The other failure (liquidity) independently confirms it wouldn't be tradeable at real size even if it were. **Rejected — this does not reach a risk-filter layer on the live value portfolio.** No shock threshold, tercile cut, or additional horizon was altered to produce this conclusion.
 
 ---
 
@@ -266,10 +286,13 @@ in-sample, in the one-shot holdout after passing every practice-window check
 events), on sample-size grounds that the available data cannot fix (value),
 on significance grounds despite a positive point estimate (Fugazzi, Swedish),
 as a clean null (pooled sentiment IC), or as real-but-not-actually-about-
-sentiment once decomposed (shock-day conditional test, Test 14 — the one
-statistically significant, cost-clearing result found in this entire program
-turned out to track news attention generally, not sentiment direction
-specifically, once checked against the positive-sentiment bucket).
+sentiment once decomposed (Test 14's 20-day pattern tracked news attention
+generally, not sentiment direction, once checked against the positive-
+sentiment bucket), or as a significant-looking result that failed to survive
+adversarial robustness checks (Test 14's 1-day sentiment-direction effect —
+the one candidate in this program that reached a formal five-check gauntlet
+— lost significance once clustered shock days were properly declustered,
+and separately showed no effect at all in liquid, tradeable names).
 
 No signal from this research program is validated for live trading. The
 original backtest dataset (Tests 1–10) can no longer support an honest new
