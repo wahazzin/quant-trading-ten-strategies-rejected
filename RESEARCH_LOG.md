@@ -181,6 +181,68 @@ Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (e
 
 ---
 
+## Test 11 — Fugazzi retest (prior CAPM/Jensen's-alpha stock-picking exercise) — **REJECTED** (positive but not significant; ~20% hindsight-driven)
+- Script: `fugazzi_retest.py`
+- Fixed a bug in 3 of 4 original scripts: they tested on the 2021–2023 TRAINING window by mistake (START_DATE bug), not the intended 2024–2025 walk-forward window. SPY, which the original project never benchmarked against, is added here.
+- Original portfolio: NVDA, AVGO, LLY, XOM, WMT, GOOGL, fixed weights [0.19, 0.205, 0.276, 0.211, 0.019, 0.10] — chosen with hindsight through 2025, not just through the training window.
+- **Test 1 (original, OOS 2024–2025):** total return **+146.09%**, annualized **+49.60%**, Sharpe 1.71, max DD -24.96%.
+- **Test 2 (SPY, same window):** total **+48.95%**, annualized **+21.42%**, Sharpe 1.31. Alpha regression: beta **1.393**, annualized alpha **+19.76%**, R²=0.622, **t=1.56** — positive but not significant.
+- **Test 3 (honest reselection):** Jensen's alpha computed per stock using ONLY 2021–2023 data (beta from 2-year weekly returns vs ^GSPC, risk_free=0.045, market_ret=0.10), top 6 picked as of end-2023: NVDA, LLY, XOM, AVGO, CVX, AMD (4/6 overlap with the original). Equal-weighted: total **+116.23%**, annualized **+43.32%**, Sharpe 1.45. **Hindsight advantage: +29.86pp total return, +0.26 Sharpe** — roughly a fifth of the original's apparent edge came from picking winners after already knowing they'd won.
+- **Test 4 (equal-weight all 30, no-skill baseline):** total **+68.24%**, annualized **+27.61%**, Sharpe 1.66. Both the original portfolio and the honest reselection beat this baseline too, so concentration wasn't the whole story.
+- Verdict: directionally positive vs SPY but alpha not statistically significant (t=1.56); a real, quantifiable slice of the apparent edge was lookahead-driven. Rejected as a demonstrated-skill claim.
+
+## Test 12 — Swedish CAPM retest (SPOT, ERIC, AZN, ALV, OTLY) — **REJECTED**
+- Script: `swedish_retest.py`
+- Same conventions as Test 11 (daily returns, no rebalancing, 2024–2025 OOS window).
+- **(a) Equal-weighted:** total **+55.07%**, annualized **+24.59%**, Sharpe 1.11. Alpha regression vs SPY: beta 0.817, alpha **+7.09%**, **t=0.56**.
+- **(b) CAPM-weighted** (pre-test 2-year weekly beta vs ^GSPC, expected_return = 0.045 + beta×0.055, weight = expected_return / Σexpected_return, computed only from 2022–2023 data): total **+51.03%**, annualized **+23.85%**, Sharpe 0.96. Alpha: beta 0.864, alpha **+5.34%**, **t=0.37**. Weights: SPOT 22.9%, ERIC 18.1%, AZN 12.1%, ALV 17.5%, **OTLY 29.3%** — the highest weight went to OTLY purely because of its high pre-test beta (2.31), despite OTLY then losing **56%** of its value in the test window from a confirmed-real (not split-artifact) decline.
+- **(c) SPY:** total +48.95%, annualized +21.42%, Sharpe 1.31.
+- Verdict: neither variant clears significance (t=0.56, t=0.37) — the modest edge over SPY is noise-level. Rejected.
+
+## Test 13 — FinBERT sentiment IC scan (pooled, average-effect diagnostic) — **REJECTED** (clean null)
+- Scripts: `check_alpaca_news_api.py` (coverage/rate-limit check), `sentiment_test.py`
+- Universe: the 11 tickers from Tests 11–12 (6 US + 5 Swedish ADRs), 2021–2025, 40,209 unique Alpaca articles, every headline scored with FinBERT (`ProsusAI/finbert`, CPU).
+- Article volume heavily skewed toward GOOGL (22,028) and NVDA (14,755) vs. the Swedish names (375–2,633) — a limitation that directly motivated Test 14's wider universe.
+- IC analysis (Spearman, `ic_analysis.py`'s methodology): sentiment vs forward returns at 1/5/10/20 trading days, both a cross-stock t-test (11 independent per-stock ICs) and a pooled t-test.
+
+| Horizon | Cross-stock mean IC | Cross-stock t | Pooled IC | Pooled t |
+|---|---|---|---|---|
+| 1d | +0.002 | 0.11 | -0.000 | -0.03 |
+| 5d | -0.005 | -0.27 | -0.010 | -0.92 |
+| 10d | -0.007 | -0.45 | -0.005 | -0.45 |
+| 20d | -0.001 | -0.07 | -0.012 | -1.14 |
+
+- Verdict: zero of 4 horizons clear |t|>2 on either measure — a flat null, not a close call. No detectable AVERAGE relationship between news sentiment and forward returns. Rejected.
+
+## Test 14 — Conditional shock-day sentiment test — **MIXED: attention effect found, but not sentiment-specific; one bucket clears cost, with an important caveat**
+- Scripts: `fetch_alpaca_news_wide.py`, `sentiment_shock_test.py`
+- **Motivation:** Test 13 measured the AVERAGE effect across every day and came back null — but pooling dilutes toward zero any effect concentrated in rare high-impact events, by construction. This asks the conditional question Test 13's design cannot answer: does sentiment predict returns specifically when something significant happens?
+- **Wider universe (Task 1):** 100 tickers randomly sampled (seed 42) from `data/yf_universe.parquet`, headlines+dates only, 2021 to present — 20,379 articles, 87/100 tickers with coverage, median 113 articles/ticker (far more balanced than Test 13's GOOGL/NVDA-dominated set; AMC was the max at 4,191).
+- **Shock-day identification (Task 2):** a "shock day" = article count ≥ 3× that ticker's own median (over active-news days). **1,782 shock days** found across 83 tickers with a definable median (15.27% of active news-days, 0.72% of all ticker-trading-days). Only shock-day headlines were FinBERT-scored (8,848 unique; 571 reused from Test 13's cache, 8,277 freshly scored) — far cheaper than rescoring the full corpus.
+- **Conditional event analysis (Task 3):** matched non-event control reused from `event_study_v2.py` — adjusted_AR = shock-day forward return − that ticker's own mean forward return on non-shock days. Terciles cut on the pooled shock-day sentiment distribution (594 events each).
+
+| Bucket | n | 1d | 5d | 10d | 20d |
+|---|---|---|---|---|---|
+| Negative tercile | 594 | **-1.685%** (t=-3.94) | -1.369% (t=-1.29) | -1.024% (t=-0.56) | **-4.407%** (t=-2.52) |
+| Positive tercile | 594 | +0.176% (t=0.28) | -0.196% (t=-0.19) | -0.939% (t=-0.66) | **-2.863%** (t=-3.14) |
+| Neutral tercile | 594 | -0.605% (t=-1.47) | -0.518% (t=-0.60) | -0.856% (t=-0.75) | **-3.584%** (t=-2.33) |
+| All pooled | 1,782 | **-0.710%** (t=-2.47) | -0.697% (t=-1.22) | -0.940% (t=-1.09) | **-3.623%** (t=-4.33) |
+
+- **Key finding, and the important caveat:** at the 20-day horizon, ALL FOUR buckets show significant negative abnormal returns — including the POSITIVE-sentiment tercile (t=-3.14). This means the 20-day drift is not specific to bad news; it tracks unusual attention itself, regardless of whether FinBERT scored the coverage as positive, negative, or neutral. The 1-day horizon is the one place sentiment direction shows up cleanly: only the negative tercile is significant (t=-3.94), consistent with an immediate bad-news reaction that fades by day 5–10 before the (sentiment-independent) 20-day drift reappears.
+- **Risk-filter test (Task 4):** for negative-sentiment shocks only, compared against each ticker's UNCONDITIONAL mean forward return (a different, simpler baseline than Task 3's non-shock-day control).
+
+| Horizon | n | Mean diff | t-stat | vs 0.63% cost |
+|---|---|---|---|---|
+| 5d | 592 | -1.354% | -1.28 | not significant |
+| 10d | 590 | -0.987% | -0.54 | not significant |
+| 20d | 589 | **-4.296%** | **-2.46** | **exceeds 0.63% cost** |
+
+- The 20-day negative-shock-vs-unconditional result is statistically significant and numerically large enough to clear the round-trip cost floor. **However, given Task 3's finding that the SAME 20-day negative drift also appears after positive-sentiment shocks, this result cannot be cleanly attributed to sentiment direction** — it may just be "this stock had an unusual news event," full stop, rather than "the news was bad." Treating this as a validated sentiment-based exit rule would overstate what was actually shown.
+- **Sample-size honesty (Task 5):** every bucket cleared the 100-event floor (594 per tercile, 1,782 pooled) — none of the above is underpowered.
+- Verdict: a real, well-powered, multi-bucket-consistent attention/shock effect exists at the 20-day horizon (not a multiple-testing artifact — 4 of 4 Task-3 buckets agree in sign and 3 of 4 clear |t|>2 at that one horizon). It is NOT cleanly a sentiment-direction effect, which is what this test set out to check. No strategy was built, no shock threshold was tuned, and no bucket was selected as "best" — every specified bucket is reported above, including the ones that don't help the "sentiment predicts returns" story.
+
+---
+
 ## Evidence-boundary status — IMPORTANT
 
 **No untouched window remains in this dataset.** 2019+ was spent on the Test 8 low-volatility holdout, then used again as the Test 9 event-study analysis window. Pre-2019 served as the practice window for Tests 7, 8, and 10.
@@ -193,13 +255,24 @@ Resuming this research requires new data — see `ROADMAP.md` Section 8 for the 
 
 ## Bottom line
 
-Ten hypothesis classes tested — SMA crossover, RSI mean-reversion, 20-day z-score
-reversal (13 and 36-stock universes, both time-series and cross-sectional
-formulations), momentum 12-1, low-volatility, SEC 8-K material events, and
-fundamental value/quality — and every one rejected, either in-sample, in the
-one-shot holdout after passing every practice-window check (low-volatility), on
-economic grounds after clearing statistical ones (8-K events), or on
-sample-size grounds that the available data cannot fix (value).
+Fourteen hypothesis classes tested — SMA crossover, RSI mean-reversion, 20-day
+z-score reversal (13 and 36-stock universes, both time-series and
+cross-sectional formulations), momentum 12-1, low-volatility, SEC 8-K material
+events, fundamental value/quality, two independent CAPM stock-picking retests
+(Fugazzi, Swedish ADRs), a pooled news-sentiment IC scan, and a conditional
+shock-day sentiment test — and every one rejected as a tradeable edge, either
+in-sample, in the one-shot holdout after passing every practice-window check
+(low-volatility), on economic grounds after clearing statistical ones (8-K
+events), on sample-size grounds that the available data cannot fix (value),
+on significance grounds despite a positive point estimate (Fugazzi, Swedish),
+as a clean null (pooled sentiment IC), or as real-but-not-actually-about-
+sentiment once decomposed (shock-day conditional test, Test 14 — the one
+statistically significant, cost-clearing result found in this entire program
+turned out to track news attention generally, not sentiment direction
+specifically, once checked against the positive-sentiment bucket).
 
-No signal from this research program is validated for live trading, and the
-dataset can no longer support an honest eleventh test.
+No signal from this research program is validated for live trading. The
+original backtest dataset (Tests 1–10) can no longer support an honest new
+test on it; Tests 11–14 used independent, freshly-sourced data (fresh
+per-ticker yfinance pulls, Alpaca news) specifically to keep generating
+uncontaminated evidence after that boundary was reached.
