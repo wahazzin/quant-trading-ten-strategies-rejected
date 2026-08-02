@@ -179,6 +179,8 @@ yfinance sample** (final universe used for all factor tests, `data/yf_universe.p
 
 Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (execute), `ops/value_report.py` (monthly tracking, since-inception performance, running observation count).
 
+**Operational bug found and fixed (checking fill status ahead of Test 15's holdout work): duplicate-order risk on re-run.** `value_rebalance.py` computed each order's size from `ib.positions()` only — a resting, unfilled GTC order has zero effect on positions until it fills, so re-running the script before that fill recomputed the identical diff and submitted a duplicate order on top of the one already resting. Caught via `verify_system.py`'s Check 5: **60 open orders at IBKR instead of 20** (three full duplicate batches, from three runs across markets-closed periods) — enough to commit roughly 3x the intended capital (~$10,500 against ~$4,700 equity) had they all filled. Cancelled the 40 duplicates back to one order per symbol (unfilled, fully reversible, no capital had moved), then fixed the root cause: the script now nets each symbol's pending open-order quantity against its position before computing the diff, so an already-resting order is recognized and not resubmitted. Re-verified: 0 orders placed on the next run, 20 correctly recognized as already covered, `verify_system.py` confirms exactly 20 resting. Inception remains deferred — still no fill observed as of this check.
+
 ---
 
 ## Test 11 — Fugazzi retest (prior CAPM/Jensen's-alpha stock-picking exercise) — **REJECTED** (positive but not significant; ~20% hindsight-driven)

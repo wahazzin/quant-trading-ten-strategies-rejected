@@ -1,12 +1,18 @@
-# Systematic Trading Research — Ten Strategies Tested, Ten Rejected
+# Systematic Trading Research — Fifteen Strategies Tested, Fifteen Rejected
 
-A complete, honestly-reported quantitative research record: ten trading strategies
+A complete, honestly-reported quantitative research record: fifteen trading strategies
 built, tested under pre-registered specifications, and rejected on the evidence.
 
 **This repository does not contain a profitable trading strategy.** It contains the
-apparatus that proved ten strategies weren't — including one that passed every
-robustness check before a sealed holdout killed it. That negative result, and the
+apparatus that proved fifteen strategies weren't — including two that passed every
+robustness check before a sealed holdout killed them. That negative result, and the
 discipline that produced it, is the point.
+
+**Start here:** **[`WINS.md`](WINS.md)** — what this program actually caught, in plain
+terms with the numbers: two strategies that fooled every practice-window check and
+died in holdout, the mechanistic reason a COVID-speed crash breaks trailing-volatility
+exposure sizing, a benchmark-confound bug, a pseudo-replication bug, and the data-quality
+issues found along the way.
 
 ---
 
@@ -49,18 +55,24 @@ report what you find. Every test here includes:
 | 7 | Momentum 12-1 | Alpha 0.56%, t = 0.13, beta 1.17 | Rejected |
 | 8 | **Low volatility (long-only)** | **Practice: alpha +4.23%, t = 2.47 → Holdout: alpha −5.60%, t = −1.62** | **Rejected in holdout** |
 | 9 | SEC 8-K event study | Effects real but ≈0.4% vs ≈0.63% round-trip cost at account size | Rejected |
-| 10 | Value (B/M) + Quality (gross profitability) | Value alpha +5.28% but t = 1.46; needs ~16yr of data, XBRL gives 8.5 | Rejected — underpowered |
+| 10 | Value (B/M) + Quality (gross profitability) | Value alpha +5.55% but t = 1.52; needs ~16yr of data, XBRL gives ~8.5 | Rejected — underpowered (now forward-testing live, see Phase 6) |
+| 11 | Fugazzi CAPM retest (prior stock-picking exercise) | Beat SPY (+146% vs +49%) but alpha t = 1.56; ~30pp of the edge was hindsight bias | Rejected |
+| 12 | Swedish ADR CAPM retest | Both equal-weight and CAPM-weight variants t < 1 vs SPY | Rejected |
+| 13 | FinBERT news-sentiment IC scan | \|t\| < 1.2 at every horizon (1/5/10/20 days), pooled and cross-stock | Rejected — clean null |
+| 14 | Conditional shock-day sentiment test | 20-day effect present in ALL sentiment terciles (attention, not sentiment); 1-day effect failed independence/liquidity checks (t = −4.02 → −1.60 declustered) | Rejected |
+| 15 | **Volatility targeting (Moreira & Muir 2017)** | **Practice: Sharpe ratio 1.217× SPY, alpha t = 1.59 → Holdout: Sharpe ratio 0.970× SPY, alpha t = 0.51** | **Rejected in holdout** |
 
 Full details, statistics, and reasoning for each: **[`RESEARCH_LOG.md`](RESEARCH_LOG.md)**
+What it all adds up to, in plain terms: **[`WINS.md`](WINS.md)**
 Current status and decision framework: **[`ROADMAP.md`](ROADMAP.md)**
 
 ---
 
-## The one that nearly made it
+## The two that nearly made it
 
-Test 8 is the interesting one.
+Tests 8 and 15 are the interesting ones — and they're interesting for the same reason.
 
-Low-volatility long-only passed **every** check designed to break it:
+Test 8, low-volatility long-only, passed **every** check designed to break it:
 
 - Practice window (2008–2018): alpha +4.23%/yr, t = 2.47, Sharpe 0.88 net of costs
 - Sub-period stability: positive alpha in both halves
@@ -70,13 +82,26 @@ Low-volatility long-only passed **every** check designed to break it:
 - Position-count sensitivity: alpha stable from 10 to 38 holdings
 
 Then the sealed 2019–2026 holdout: **alpha −5.60%, Sharpe 0.46, beta drifted 0.66 →
-0.77.** The effect didn't weaken. It inverted.
+0.77.** The effect didn't weaken. It inverted. Even gross of all costs, the strategy
+returned 6.81%/yr while SPY returned 16.77%/yr over the same window.
 
-Even gross of all costs, the strategy returned 6.81%/yr while SPY returned 16.77%/yr
-over the same window.
+Test 15, volatility targeting (Moreira & Muir 2017), followed the identical arc on a
+completely different hypothesis class — timing market exposure, not picking stocks:
 
-**Without the holdout discipline, this would have gone to paper trading and then
-live.** That's the entire argument for the methodology in one example.
+- Practice window (1993–2009, 200 monthly observations — the deepest history and
+  largest sample in this project): Sharpe ratio **1.217×** SPY, and **1.244×** a
+  constant-leverage benchmark at the same average exposure — meaning the improvement
+  was attributable to the timing itself, not just to carrying leverage
+- Then the sealed 2010–2026 holdout: Sharpe ratio fell to **0.970×** SPY — the
+  strategy no longer even matched the index on a risk-adjusted basis — and alpha
+  collapsed from t = 1.59 to t = 0.51
+- The COVID sub-period shows exactly why: exposure entered February 2020 at 123%
+  (set from January's calm, pre-crash reading), then got cut to 17% by April — missing
+  most of the rebound. Over-levered into the fastest crash on record, under-levered
+  into the recovery. Full month-by-month breakdown in [`WINS.md`](WINS.md).
+
+**Without the holdout discipline, both of these would have gone to paper trading and
+then live.** That's the entire argument for the methodology, twice.
 
 ---
 

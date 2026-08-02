@@ -94,6 +94,20 @@ monitor = TradeMonitor(ib, journal)  # attached BEFORE any order so fills are jo
 current_positions = {p.contract.symbol: p.position for p in ib.positions()}
 print(f"Current IBKR positions (all symbols): {current_positions if current_positions else '(flat)'}")
 
+# Net pending (unfilled, still-working) order quantity per symbol -- a resting GTC order
+# from a prior run has zero effect on ib.positions() until it fills, so without this a
+# re-run before that fill would recompute the SAME diff and submit a duplicate order on
+# top of the one already resting. Cost of getting this wrong was real: a re-run before
+# markets reopened tripled every order size (60 resting orders instead of 20) before it
+# was caught and cleaned up.
+pending_qty = {}
+for t in ib.openTrades():
+    sym = t.contract.symbol
+    signed = t.order.totalQuantity if t.order.action == "BUY" else -t.order.totalQuantity
+    pending_qty[sym] = pending_qty.get(sym, 0) + signed
+if pending_qty:
+    print(f"Pending (unfilled, still-working) order quantity by symbol: {pending_qty}")
+
 # Inception is "real capital deployed", not "orders submitted" -- if every
 # order rejects (e.g. markets closed) or every GTC order is still resting
 # unfilled, there is nothing to measure yet. This also catches a resting
@@ -150,11 +164,11 @@ print("=" * 96)
 if not drop_tickers:
     print("(none)")
 for ticker in sorted(drop_tickers):
-    current_qty = current_positions.get(ticker, 0)
-    if current_qty == 0:
-        print(f"  {ticker}: already flat, nothing to sell")
+    effective_qty = current_positions.get(ticker, 0) + pending_qty.get(ticker, 0)
+    if effective_qty == 0:
+        print(f"  {ticker}: already flat (including pending orders), nothing to sell")
         continue
-    place_and_wait(ticker, "SELL", int(abs(current_qty)), "drop")
+    place_and_wait(ticker, "SELL", int(abs(effective_qty)), "drop")
 
 print()
 print("=" * 96)
@@ -162,9 +176,15 @@ print("BUYS / ADJUSTS -- target names")
 print("=" * 96)
 for ticker, target_shares in sorted(target.items()):
     current_qty = int(current_positions.get(ticker, 0))
-    diff = target_shares - current_qty
+    pending = int(pending_qty.get(ticker, 0))
+    effective_qty = current_qty + pending
+    diff = target_shares - effective_qty
     if diff == 0:
-        print(f"  {ticker}: already at target ({target_shares} shares)")
+        if pending:
+            print(f"  {ticker}: already at target once the pending order fills "
+                  f"({current_qty} held + {pending:+d} pending = {target_shares})")
+        else:
+            print(f"  {ticker}: already at target ({target_shares} shares)")
         continue
     action = "BUY" if diff > 0 else "SELL"
     place_and_wait(ticker, action, abs(diff), "rebalance")
