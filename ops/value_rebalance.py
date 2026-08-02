@@ -1,54 +1,65 @@
 """
-value_rebalance.py -- Phase 6 forward test, Task 2: execute the target
-value portfolio (ops/value_portfolio.py's output) against the real
+value_rebalance.py -- Phase 6 forward test: execute the target value
+portfolio (ops/value_portfolio.py's output) against the real Alpaca
 paper account.
 
-Every BUY/SELL is sized against the REAL current IBKR position for that
-symbol (never what this script "thinks" it holds) -- correct even if a
-prior rebalance only partially filled. Drops (previously-tracked names
-no longer in today's target) are determined ONLY from the last executed
-target list, data/value_portfolio_previous.csv -- never from "IBKR shows
-a position here and it's not in today's target." That distinction
-matters: this account can hold positions this strategy never touched
-(e.g. the stale F bracket-order legs ops/verify_system.py flagged), and
-nothing gets sold on the strength of an unrecognized symbol alone.
+Migrated from IBKR to Alpaca (see ROADMAP.md) -- no gateway process to
+keep running for a months-long forward test, REST-only, and no
+per-order commission (see ROADMAP.md constraint C1 for the real cost
+basis this replaces).
 
-At inception (no data/value_portfolio_previous.csv yet), there is
-nothing to drop -- every target name is simply bought from whatever its
-current IBKR position is (0, for a fresh account).
+Every order is sized through bot/broker/reconcile.py's single
+reconciliation function -- current position + pending orders + target
+-> net diff. That function exists because three separate incidents of
+stale/duplicate orders happened in this project before it did (see
+reconcile.py's docstring for the full list) -- nothing in this script
+computes a buy/sell diff on its own anymore.
 
-Rejections are caught and reported per order; one rejected order does
-not stop the rest of the rebalance. TradeMonitor is attached before any
-order is placed so every fill is journaled with a real entry price.
+Fills are journaled two ways:
+  1. Immediately, if an order fills within the short wait window after
+     submission.
+  2. On catch-up, at the start of every run: any symbol where the
+     broker shows a position but the local journal has no matching
+     OpenPosition record gets its most recent filled order looked up
+     and journaled then. A GTC order placed while markets are closed
+     can fill days after submission, potentially across several script
+     runs -- this makes fill-journaling correct regardless of when
+     that happens.
 
-On the run that completes without data/value_portfolio_state.json yet
-existing, this IS inception: net liquidation (converted to USD) and
-SPY's current price are captured and persisted there for
-ops/value_report.py to measure "since inception" performance against.
+Drops (previously-tracked names no longer in today's target) are
+folded into the SAME reconciliation call as everything else --
+`symbols` is target names UNION previously-tracked names, and
+`reconcile()` treats a symbol absent from today's target as target=0.
+This account can hold positions this strategy never touched (old test
+trades, manual holdings); nothing outside `symbols` is ever considered.
+
+--dry-run prints the reconciled plan without submitting anything.
 """
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import json
+import time
+import argparse
 import pandas as pd
 from datetime import datetime, timezone
-from ib_async import Stock, MarketOrder
 
-from bot.broker.ibkr_client import IBKRClient
-from bot.broker.trade_monitor import TradeMonitor
-from bot.broker.fx import FXConverter
+from bot.broker.alpaca_client import AlpacaClient
+from bot.broker.reconcile import reconcile, execute_plan
 from bot.journal.db import TradeJournal
 
 TARGET_PATH = os.path.join("data", "value_portfolio_current.csv")
 PREVIOUS_PATH = os.path.join("data", "value_portfolio_previous.csv")
 STATE_PATH = os.path.join("data", "value_portfolio_state.json")
-INSTRUMENT_CURRENCY = "USD"
 BENCHMARK_SYMBOL = "SPY"
-ORDER_WAIT_SECONDS = 4
-ORDER_TIF = "GTC"  # DAY orders submitted while markets are closed are rejected outright
-                    # by this gateway (error 399) rather than queued -- GTC rests correctly
-                    # until the next session instead of dying on submission.
+ORDER_TIF = "gtc"
+FILL_WAIT_SECONDS = 8
+FILL_POLL_INTERVAL = 2
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dry-run", action="store_true", help="Print the reconciled plan without submitting orders.")
+args = parser.parse_args()
 
 if not os.path.exists(TARGET_PATH):
     raise SystemExit(f"{TARGET_PATH} not found -- run ops/value_portfolio.py first.")
@@ -56,9 +67,11 @@ if not os.path.exists(TARGET_PATH):
 target_df = pd.read_csv(TARGET_PATH)
 target = {row.ticker: int(row.target_shares) for row in target_df.itertuples(index=False)}
 print("=" * 96)
-print("VALUE PORTFOLIO REBALANCE")
+print("VALUE PORTFOLIO REBALANCE (Alpaca)")
 print("=" * 96)
 print(f"Target portfolio: {len(target)} names from {TARGET_PATH}")
+if args.dry_run:
+    print("*** DRY RUN -- no orders will be submitted ***")
 
 previous_tickers = set()
 if os.path.exists(PREVIOUS_PATH):
@@ -71,181 +84,167 @@ else:
 is_inception = not os.path.exists(STATE_PATH)
 print(f"Inception run: {is_inception}")
 
-errors_by_orderid = {}
-
-
-def on_error(reqId, errorCode, errorString, contract):
-    errors_by_orderid.setdefault(reqId, []).append((errorCode, errorString))
-
-
-client = IBKRClient()
+client = AlpacaClient(paper=True)
 connected = client.connect()
-print("Connected:", connected)
 if not connected:
-    raise SystemExit("Could not connect to IB Gateway.")
-
-ib = client.ib
-ib.errorEvent += on_error
-ib.sleep(2)
+    raise SystemExit("Could not reach Alpaca.")
 
 journal = TradeJournal()
-monitor = TradeMonitor(ib, journal)  # attached BEFORE any order so fills are journaled
+symbols = set(target.keys()) | previous_tickers
 
-current_positions = {p.contract.symbol: p.position for p in ib.positions()}
-print(f"Current IBKR positions (all symbols): {current_positions if current_positions else '(flat)'}")
+current_positions = client.get_positions()
+pending_orders = client.get_open_orders()
+print(f"\nCurrent Alpaca positions (all symbols): {current_positions if current_positions else '(flat)'}")
+print(f"Pending (open) order quantity by symbol: {pending_orders if pending_orders else '(none)'}")
 
-# Net pending (unfilled, still-working) order quantity per symbol -- a resting GTC order
-# from a prior run has zero effect on ib.positions() until it fills, so without this a
-# re-run before that fill would recompute the SAME diff and submit a duplicate order on
-# top of the one already resting. Cost of getting this wrong was real: a re-run before
-# markets reopened tripled every order size (60 resting orders instead of 20) before it
-# was caught and cleaned up.
-pending_qty = {}
-for t in ib.openTrades():
-    sym = t.contract.symbol
-    signed = t.order.totalQuantity if t.order.action == "BUY" else -t.order.totalQuantity
-    pending_qty[sym] = pending_qty.get(sym, 0) + signed
-if pending_qty:
-    print(f"Pending (unfilled, still-working) order quantity by symbol: {pending_qty}")
+# ============================================================
+# CATCH-UP: journal any fills from prior runs that were never recorded
+# ============================================================
+print()
+print("=" * 96)
+print("CATCH-UP: checking for unjournaled fills")
+print("=" * 96)
+caught_up_any = False
+for sym in sorted(symbols):
+    held = current_positions.get(sym, 0)
+    if held == 0:
+        continue
+    existing = journal.get_open_position(sym)
+    if existing is not None and abs(existing["quantity"] - held) < 0.5:
+        continue  # already correctly journaled
 
-# Inception is "real capital deployed", not "orders submitted" -- if every
-# order rejects (e.g. markets closed) or every GTC order is still resting
-# unfilled, there is nothing to measure yet. This also catches a resting
-# order from a PRIOR run that has since filled between runs.
+    filled = [o for o in client.get_closed_orders(sym) if o.get("filled_qty") and float(o["filled_qty"]) > 0]
+    if not filled:
+        print(f"  {sym}: broker shows {held} shares but no filled order found -- skipping (manual check needed)")
+        continue
+    latest = max(filled, key=lambda o: o["filled_at"])
+    fill_time = datetime.fromisoformat(latest["filled_at"].replace("Z", "+00:00"))
+    journal.record_entry_fill(symbol=sym, shares=float(latest["filled_qty"]),
+                               price=float(latest["filled_avg_price"]), fill_time=fill_time)
+    print(f"  {sym}: journaled catch-up fill -- {latest['filled_qty']} shares @ {latest['filled_avg_price']} "
+          f"(order {latest['id']}, filled {latest['filled_at']})")
+    caught_up_any = True
+if not caught_up_any:
+    print("  (nothing to catch up -- all broker positions already journaled)")
+
+
+# ============================================================
+# RECONCILE + EXECUTE
+# ============================================================
+def place_order(symbol, action, qty):
+    resp = client.place_market_order(symbol, action, qty, tif=ORDER_TIF)
+    if resp.get("error"):
+        print(f"  REJECTED {action} {qty} {symbol}: {resp['message']}")
+        return {"status": "rejected", "error": resp["message"]}
+
+    order_id = resp["id"]
+    print(f"  Submitted {action} {qty} {symbol} (order {order_id})")
+
+    waited = 0
+    status_resp = resp
+    while waited < FILL_WAIT_SECONDS:
+        time.sleep(FILL_POLL_INTERVAL)
+        waited += FILL_POLL_INTERVAL
+        status_resp = client.get_order(order_id)
+        if status_resp["status"] == "filled":
+            shares = float(status_resp["filled_qty"])
+            price = float(status_resp["filled_avg_price"])
+            fill_time = datetime.fromisoformat(status_resp["filled_at"].replace("Z", "+00:00"))
+            if action == "BUY":
+                journal.record_entry_fill(symbol=symbol, shares=shares, price=price, fill_time=fill_time)
+            else:
+                journal.record_exit_fill(symbol=symbol, shares=shares, price=price, fill_time=fill_time)
+            print(f"  FILLED {action} {shares:g} {symbol} @ {price:.4f}")
+            return {"status": "filled", "shares": shares, "price": price}
+        if status_resp["status"] in ("canceled", "expired", "rejected"):
+            print(f"  {status_resp['status'].upper()} {action} {symbol}")
+            return {"status": status_resp["status"]}
+
+    print(f"  PENDING {action} {qty} {symbol}: status={status_resp['status']}, no fill within wait window")
+    return {"status": "pending"}
+
+
+print()
+print("=" * 96)
+print("RECONCILED PLAN")
+print("=" * 96)
+diffs = reconcile(symbols, target, current_positions, pending_orders)
+results = execute_plan(diffs, place_order, dry_run=args.dry_run)
+
+# ============================================================
+# INCEPTION SNAPSHOT -- fires once real capital is confirmed deployed
+# ============================================================
 already_holding_target_name = any(current_positions.get(t, 0) != 0 for t in target)
+any_filled_this_run = any(r[3] and r[3].get("status") == "filled" for r in results)
 
-drop_tickers = previous_tickers - set(target.keys())
-
-orders_placed = []
-orders_filled = []
-orders_rejected = []
-
-
-def place_and_wait(ticker, action, qty, label):
-    contract = Stock(ticker, "SMART", INSTRUMENT_CURRENCY)
-    try:
-        ib.qualifyContracts(contract)
-    except Exception as e:
-        print(f"  REJECTED {label} {ticker}: contract qualification failed ({e})")
-        orders_rejected.append((ticker, label, str(e)))
-        return
-
-    order = MarketOrder(action, qty)
-    order.tif = ORDER_TIF
-    trade = ib.placeOrder(contract, order)
-    orders_placed.append((ticker, action, qty))
-    print(f"  Submitted {action} {qty} {ticker} ({label})")
-
-    ib.sleep(ORDER_WAIT_SECONDS)
-    status = trade.orderStatus.status
-    my_errors = errors_by_orderid.get(trade.order.orderId, [])
-
-    if status in ("Cancelled", "Inactive") or my_errors:
-        err_str = "; ".join(f"{c}: {m}" for c, m in my_errors) if my_errors else f"status={status}"
-        print(f"  REJECTED {action} {ticker}: {err_str}")
-        orders_rejected.append((ticker, label, err_str))
-        return
-
-    fills = trade.fills
-    if not fills:
-        print(f"  PENDING {action} {ticker}: status={status}, no fill observed within the wait window")
-        return
-
-    total_shares = sum(f.execution.shares for f in fills)
-    avg_price = sum(f.execution.shares * f.execution.price for f in fills) / total_shares
-    print(f"  FILLED {action} {int(total_shares)} {ticker} @ avg {avg_price:.4f}")
-    orders_filled.append((ticker, action, int(total_shares), avg_price))
-
-
-print()
-print("=" * 96)
-print("SELLS -- names dropped from the target since the last tracked rebalance")
-print("=" * 96)
-if not drop_tickers:
-    print("(none)")
-for ticker in sorted(drop_tickers):
-    effective_qty = current_positions.get(ticker, 0) + pending_qty.get(ticker, 0)
-    if effective_qty == 0:
-        print(f"  {ticker}: already flat (including pending orders), nothing to sell")
-        continue
-    place_and_wait(ticker, "SELL", int(abs(effective_qty)), "drop")
-
-print()
-print("=" * 96)
-print("BUYS / ADJUSTS -- target names")
-print("=" * 96)
-for ticker, target_shares in sorted(target.items()):
-    current_qty = int(current_positions.get(ticker, 0))
-    pending = int(pending_qty.get(ticker, 0))
-    effective_qty = current_qty + pending
-    diff = target_shares - effective_qty
-    if diff == 0:
-        if pending:
-            print(f"  {ticker}: already at target once the pending order fills "
-                  f"({current_qty} held + {pending:+d} pending = {target_shares})")
-        else:
-            print(f"  {ticker}: already at target ({target_shares} shares)")
-        continue
-    action = "BUY" if diff > 0 else "SELL"
-    place_and_wait(ticker, action, abs(diff), "rebalance")
-
-# Inception snapshot -- captured while still connected, before disconnect.
-# Only fires once real capital has actually been deployed (a fill this run,
-# or a resting order from a prior run that has since filled) -- not merely
-# because orders were submitted.
-if is_inception and (orders_filled or already_holding_target_name):
+if is_inception and not args.dry_run and (any_filled_this_run or already_holding_target_name or caught_up_any):
     print()
     print("=" * 96)
     print("INCEPTION SNAPSHOT")
     print("=" * 96)
-    ib.sleep(2)
-    equity = client.get_net_liquidation()
-    account_currency = client.get_account_currency()
-    fx = FXConverter(ib)
-    equity_usd = fx.convert(equity, account_currency, INSTRUMENT_CURRENCY)
+    equity_usd = client.get_net_liquidation()
 
-    spy_contract = Stock(BENCHMARK_SYMBOL, "SMART", "USD")
-    ib.qualifyContracts(spy_contract)
-    spy_bars = ib.reqHistoricalData(
-        spy_contract, endDateTime="", durationStr="2 D", barSizeSetting="1 day",
-        whatToShow="TRADES", useRTH=True, formatDate=1,
-    )
-    spy_price = spy_bars[-1].close if spy_bars else None
+    # The Alpaca account's total equity is not the right inception baseline: this
+    # strategy deploys ~$3,500 of it (the same 20-position sizing already computed
+    # for the account this portfolio was originally sized for), leaving the rest as
+    # uninvested cash. Measuring "portfolio return" against WHOLE-ACCOUNT equity
+    # would dilute the value strategy's actual performance by that uninvested cash
+    # -- on a $98k account with $3.5k deployed, a real move in the 20 positions
+    # would barely register. inception_portfolio_value is the capital actually
+    # deployed (real fill price x quantity, from the journal), and is what
+    # value_report.py measures returns against. Whole-account equity is kept too,
+    # for context/audit, but is not the return-measurement baseline.
+    deployed_value = 0.0
+    for t in target:
+        pos = journal.get_open_position(t)
+        if pos:
+            deployed_value += pos["quantity"] * pos["avg_entry_price"]
+
+    spy_price = client.get_last_price(BENCHMARK_SYMBOL)
 
     inception_date = datetime.now(timezone.utc).date().isoformat()
     state = {
         "inception_date": inception_date,
         "inception_equity_usd": equity_usd,
+        "inception_portfolio_value_usd": deployed_value,
         "inception_spy_price": spy_price,
+        "broker": "alpaca",
     }
     with open(STATE_PATH, "w") as f:
         json.dump(state, f, indent=2)
     print(f"Inception date: {inception_date}")
-    print(f"Inception equity: {equity_usd:.2f} USD")
+    print(f"Whole-account equity (context only, NOT the return baseline): {equity_usd:.2f} USD")
+    print(f"Capital actually deployed to this strategy (the real return baseline): {deployed_value:.2f} USD")
     print(f"Inception SPY reference price: {spy_price}")
     print(f"Saved to {STATE_PATH}")
 elif is_inception:
     print()
-    print("Inception deferred: no fills yet and no pre-existing target-name positions -- "
-          "orders are likely still resting (GTC) until markets reopen. Re-run this script "
-          "after the next session to capture inception once real capital is actually deployed.")
+    print("Inception deferred: no fills yet and no pre-existing target-name positions. "
+          "Re-run this script later to check status and capture inception once real capital is deployed.")
 
 client.disconnect()
 
+# ============================================================
+# SUMMARY
+# ============================================================
 print()
 print("=" * 96)
 print("SUMMARY")
 print("=" * 96)
-print(f"Orders placed:   {len(orders_placed)}")
-print(f"Orders filled:   {len(orders_filled)}")
-for t, a, q, p in orders_filled:
-    print(f"  FILLED {a} {q} {t} @ {p:.4f}")
-print(f"Orders rejected: {len(orders_rejected)}")
-for t, label, err in orders_rejected:
-    print(f"  REJECTED ({label}) {t}: {err}")
-pending = len(orders_placed) - len(orders_filled) - len(orders_rejected)
-if pending > 0:
-    print(f"Orders still pending (no fill/rejection observed within the wait window): {pending}")
+filled = [r for r in results if r[3] and r[3].get("status") == "filled"]
+pending = [r for r in results if r[3] and r[3].get("status") == "pending"]
+rejected = [r for r in results if r[3] and r[3].get("status") in ("rejected", "canceled", "expired")]
+print(f"Orders in plan:  {len(results)}")
+print(f"Orders filled:   {len(filled)}")
+for sym, action, qty, res in filled:
+    print(f"  FILLED {action} {res['shares']:g} {sym} @ {res['price']:.4f}")
+print(f"Orders pending:  {len(pending)}")
+print(f"Orders rejected: {len(rejected)}")
+for sym, action, qty, res in rejected:
+    print(f"  {res['status'].upper()} {action} {qty} {sym}")
 
-target_df.to_csv(PREVIOUS_PATH, index=False)
-print(f"\nSaved this rebalance's target list to {PREVIOUS_PATH} for next time's drop detection.")
+if not args.dry_run:
+    target_df.to_csv(PREVIOUS_PATH, index=False)
+    print(f"\nSaved this rebalance's target list to {PREVIOUS_PATH} for next time's drop detection.")
+else:
+    print(f"\nDry run -- {PREVIOUS_PATH} NOT updated.")

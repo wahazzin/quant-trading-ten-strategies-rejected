@@ -41,11 +41,43 @@ These are the facts that shape every future decision. They were discovered
 empirically during Phase 2 and must not be forgotten.
 
 **C1 — Commission drag is the binding constraint.**
-At ~50,000 SEK (~$4,700 USD) with $1.00/order minimum commission:
+At ~50,000 SEK (~$4,700 USD) with $1.00/order minimum commission (IBKR, the
+broker used for every test and the original Phase 6 forward test):
 - Monthly rebalance, 38 positions → **4.04%/year** drag
 - Quarterly rebalance, 20 positions → **1.49%/year** drag
 Any strategy must clear this hurdle *before* it beats SPY.
 **Implication: low turnover is not a preference, it is a requirement.**
+
+**UPDATE (2026-08-02) — moved to Alpaca; the $1/order floor above no longer
+applies going forward.** Migration reason: a months-long forward test cannot
+depend on a Gateway process staying up on a local machine indefinitely; Alpaca's
+REST API needs no persistent connection. Alpaca is commission-free for US
+equities — the only costs are small regulatory pass-throughs (SEC fee, sells
+only, ~$20.60 per $1,000,000 of principal; FINRA TAF, sells only, ~$0.000195/share;
+a small CAT fee on both legs), each rounded up to the nearest cent, confirmed both
+from published rates and the account's own fee history. **Measured round-trip
+cost on a ~$450 position: approximately $0.04, or ~0.009%** — roughly 50x smaller
+than the ~$2.00 (~0.44%) the IBKR-era model above assumed for the same position.
+Full derivation and the account-scale implications of the migration (Alpaca's
+paper account is ~$98,550 vs. the original ~$4,700 — the forward test's ~$3,500
+target investment stayed at its original size, deployed as a small slice of a
+much larger account, to preserve continuity with everything already measured
+against the small-account numbers above) are in `RESEARCH_LOG.md`'s Phase 6
+section.
+
+**Flagged, not reopened: Test 9's rejection was partly cost-driven and may
+deserve re-examination under this new cost basis.** Test 9 (SEC 8-K event
+study) was rejected on economic grounds specifically: a real, statistically
+significant ~0.41% edge (item 5.02, 10-day horizon) was smaller than the
+~0.63% round-trip cost assumed at the time. Under Alpaca's real ~0.009% cost,
+that same edge would clear costs by roughly 40x instead of failing by ~35%.
+This is **not** an instruction to rerun Test 9 now — doing so with the specific
+foreknowledge that costs just got much cheaper is exactly the kind of post-hoc
+lever-pulling this project's discipline exists to prevent, and Test 9's data
+is not holdout-clean for a fresh look (see Evidence-Boundary status,
+`RESEARCH_LOG.md`). It is recorded here as a trigger for a future, properly
+pre-registered retest — on genuinely new data, or through a formally reopened
+and pre-committed evaluation — not something to act on today.
 
 **C2 — More frequent trading makes everything worse.**
 Higher frequency → more trades → more commission drag → worse net returns.
@@ -198,5 +230,57 @@ momentum 12-1 (alpha t=0.13) · low volatility (holdout alpha −5.60%)
 
 ---
 
-*Last updated: July 2026, after the low-volatility holdout failure and at the
-start of the Phase 3 event study.*
+## 10. EXTERNAL TOOLS — STATUS AND TRIGGERS
+
+Tools evaluated or adopted outside this repo's own code, what each is actually
+for, and the specific condition that would make picking it back up worthwhile.
+None of these are a substitute for a proven edge — most of them are plumbing
+that only matters once one exists.
+
+**ml4t** (cloned at `C:\Users\uwuzp\ml4t-study`) — a machine-learning-for-trading
+curriculum/codebase. Its Information Coefficient methodology is already in use
+throughout this project (`ic_analysis.py` and everything built on the same
+per-stock-IC / cross-sectional-t-test pattern). Remaining chapters are largely
+**moot**: much of the rest of the curriculum builds toward NLP/sentiment
+feature engineering, and Tests 13-14 already tested that hypothesis class to
+death (clean null on pooled IC, and the one significant conditional effect
+failed independence and liquidity robustness checks). Revisit only if a
+non-sentiment ML technique from later chapters (e.g. a specific factor-model
+or portfolio-construction method) becomes relevant to a new, still-untested
+hypothesis.
+
+**NautilusTrader** and **QuantConnect Lean** — production-grade execution
+engines. Both are **not currently relevant**: they solve the problem of
+running a proven strategy reliably at scale, and this project doesn't have a
+proven strategy to run. **Trigger: a proven edge (holdout-surviving, not just
+practice-window-passing) PLUS an actual decision to go live with real,
+non-paper capital.** Until both conditions hold, adopting either would be
+infrastructure for a strategy that doesn't exist yet — the exact "premature
+infrastructure is procrastination" trap Section 6 already warns against.
+
+**TradingAgents** — a bull/bear multi-agent debate framework for
+sentiment-driven decisions. **Moot.** Its entire premise is that structured
+debate over sentiment signals adds value; Tests 13-14 tested sentiment
+directly (FinBERT, pooled IC and a conditional shock-day design) and found
+nothing that survives scrutiny. Layering a debate structure on top of a
+signal that isn't there doesn't create one.
+
+**Vibe-Trading** — an independent cross-check / second-opinion tool. Not
+needed today because there is no candidate signal to check. **Trigger: if a
+future test ever produces a genuine holdout-surviving result**, this is the
+right tool to run as an independent adversarial check before treating that
+result as real — the same spirit as Test 14's five-check robustness gauntlet,
+from a second angle.
+
+**alphalens-reloaded** — **rejected**, not merely deferred. It forces a
+pandas downgrade, which conflicts directly with the hard `pandas 3.0.3`
+requirement stated in every script's environment notes across this entire
+project. Not worth the fragmentation of running two incompatible pandas
+versions for one library's convenience functions, all of which (IC analysis,
+quantile spreads, turnover) are already hand-built and working in this
+codebase.
+
+---
+
+*Last updated: 2026-08-02, after migrating the Phase 6 forward test from IBKR
+to Alpaca.*
