@@ -19,6 +19,8 @@ import os
 import requests
 from dotenv import load_dotenv
 
+from bot.broker.reconcile import pending_quantity
+
 load_dotenv()
 
 PAPER_BASE_URL = "https://paper-api.alpaca.markets"
@@ -85,29 +87,16 @@ class AlpacaClient:
     def get_open_orders(self):
         """Net signed REMAINING (unfilled) quantity of all open/pending orders per
         symbol -- positive = net buy exposure still working, negative = net sell
-        exposure still working. This is the piece that was missing before: a
-        resting order has zero effect on get_positions() until it fills, so any
-        pre-flight check that only looks at positions will recompute the same
-        diff and resubmit on every re-run.
-
-        Uses (qty - filled_qty), NOT qty -- an order stays "open" in Alpaca's API
-        while PARTIALLY filled (status='partially_filled'), and qty is always the
-        original total requested. Using raw qty here double-counts the portion
-        that's already filled and visible in get_positions(): a 4-share order
-        filled 2-of-4 shows position=2 AND (with the bug) pending=4, so
-        reconcile() sees effective=6 against a target of 4 and tries to SELL the
-        difference -- exactly what happened the first time this ran (caught only
-        because Alpaca's own wash-trade protection rejected the erroneous SELLs)."""
-        resp = requests.get(f"{self.base_url}/v2/orders", headers=self._headers,
-                             params={"status": "open"}, timeout=15)
-        resp.raise_for_status()
-        pending = {}
-        for o in resp.json():
-            sym = o["symbol"]
-            remaining = float(o["qty"]) - float(o.get("filled_qty") or 0)
-            signed = remaining if o["side"] == "buy" else -remaining
-            pending[sym] = pending.get(sym, 0.0) + signed
-        return pending
+        exposure still working. This is display/reporting sugar only now; the
+        actual reconciliation math lives in bot/broker/reconcile.py's
+        pending_quantity(), which takes the raw order objects (see
+        get_open_orders_raw()) and does this computation itself. It used to be
+        duplicated here too -- which is exactly how a partial-fill bug survived
+        the original "fix the reconciliation bug at the root" pass (a resting
+        order stays "open" while PARTIALLY filled, and using raw qty instead of
+        qty - filled_qty double-counts the already-filled portion). See
+        reconcile.py's module docstring, incident #4, for the full story."""
+        return pending_quantity(self.get_open_orders_raw())
 
     def get_closed_orders(self, symbol=None, limit=50):
         """Recently closed (filled/cancelled/expired/rejected) orders --
@@ -164,6 +153,24 @@ class AlpacaClient:
                              headers=self._headers, timeout=15)
         resp.raise_for_status()
         return float(resp.json()["trade"]["p"])
+
+    def get_daily_bars(self, symbol, start, end):
+        """Daily OHLCV bars for `symbol` between start and end (date strings or
+        anything str()-able as YYYY-MM-DD), oldest first -- used by
+        ops/event_monitor.py to compute forward returns from live data once
+        those dates arrive (data/yf_universe.parquet is a static historical
+        snapshot, not updated going forward).
+
+        feed=iex: this account's data plan returns 403 on the default (SIP)
+        feed for historical bars; IEX is the free tier and is what
+        get_last_price already implicitly relies on being available."""
+        resp = requests.get(f"{DATA_BASE_URL}/v2/stocks/{symbol}/bars",
+                             headers=self._headers,
+                             params={"timeframe": "1Day", "start": str(start), "end": str(end),
+                                     "adjustment": "split", "limit": 10000, "feed": "iex"},
+                             timeout=15)
+        resp.raise_for_status()
+        return resp.json().get("bars") or []
 
     def is_market_open(self):
         resp = requests.get(f"{self.base_url}/v2/clock", headers=self._headers, timeout=15)

@@ -93,7 +93,8 @@ journal = TradeJournal()
 symbols = set(target.keys()) | previous_tickers
 
 current_positions = client.get_positions()
-pending_orders = client.get_open_orders()
+open_orders_raw = client.get_open_orders_raw()
+pending_orders = client.get_open_orders()  # display only -- see reconcile.pending_quantity() for the real math
 print(f"\nCurrent Alpaca positions (all symbols): {current_positions if current_positions else '(flat)'}")
 print(f"Pending (open) order quantity by symbol: {pending_orders if pending_orders else '(none)'}")
 
@@ -178,7 +179,11 @@ print()
 print("=" * 96)
 print("RECONCILED PLAN")
 print("=" * 96)
-diffs = reconcile(symbols, target, current_positions, pending_orders)
+diffs, warnings = reconcile(symbols, target, current_positions, open_orders_raw)
+if warnings:
+    print(f"*** {len(warnings)} trade(s) REFUSED by the hard safety check -- nothing submitted for these, manual review needed ***")
+    for w in warnings:
+        print(f"  WARNING: {w}")
 results = execute_plan(diffs, place_order, dry_run=args.dry_run)
 
 # ============================================================

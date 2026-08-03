@@ -212,6 +212,38 @@ Scripts: `ops/value_portfolio.py` (generate target), `ops/value_rebalance.py` (e
 
 **Status at migration:** 20 orders placed on Alpaca, confirmed clean (exactly 20, no duplicates). Markets were closed at submission (next open 2026-08-03 09:30 ET); all 20 are resting GTC. Inception is deferred — not yet stamped, no fill observed yet.
 
+**Inception stamped, then corrected (2026-08-03).** After market open, `value_rebalance.py` caught the first wave of fills and stamped inception at $3,017.04 deployed capital. Two more bugs surfaced catching the remaining fills:
+
+- **4th reconciliation incident:** several GTC orders were still only partially filled (e.g. a 4-share order filled 2-of-4). `get_open_orders()` computed pending exposure from the order's original `qty` instead of `qty - filled_qty`, so a partially-filled position looked double-counted — position=2 AND pending=4 against a target of 4 — and the diff math tried to **SELL** 2 shares out of a position the target wanted held, for 5 symbols. Caught only by Alpaca's own wash-trade protection (error 40310000), not by anything in this project. Fixed at the root this time: `bot/broker/reconcile.py` now owns the pending-quantity computation itself (`pending_quantity()`, covered by `tests/test_reconcile.py`) instead of trusting each broker client to get it right, and gained a second, independent layer — `check_trade_safety()` — that hard-refuses any computed trade that would sell into a target-held position or exceed 2x the intended size, regardless of what produced the bad number. 17 unit tests added covering both layers (no position + no orders, partial fill, over-target, exact-target, plus the incident's exact shape and an oversized-order case).
+- **Catch-up logic gap:** the fill-journaling catch-up loop only checked *closed* orders, but a partially-filled order stays *open* in Alpaca's API — so 5 of 6 initial fills went unjournaled the first time. Fixed by also checking still-open orders and journaling only the incremental new quantity.
+- **Baseline fired mid-fill:** once all 20 positions were confirmed fully filled (all fills completed within a ~5-minute window after market open), the frozen $3,017.04 baseline was found to understate what had actually been deployed by the time the last order cleared ($3,549.17, the true full cost basis) — inflating the same-day return figure to a nonsensical +16.94% purely from capital arriving after the snapshot, not price movement. Corrected once, same day, before any monthly observation existed to be contaminated by it: **inception restamped at $3,549.17 deployed capital, SPY reference 756.08, 2026-08-03.** Day-zero return after correction: -0.64% vs SPY +0.00%, consistent with the individual holdings' P&L.
+- **Status:** all 20 positions confirmed fully filled, matching `data/value_portfolio_current.csv`'s target share counts exactly. No orders resting, no safety-check warnings.
+
+---
+
+## Phase 6b — Forward Test 2: 8-K liquid-name event effect — PRE-REGISTERED, IN PROGRESS
+
+**This entry is written before `data/event_forward_log.parquet` holds a single row.** Nothing below was adjusted after seeing any result, because no result exists yet.
+
+**Start date:** 2026-08-03 — the date `ops/event_monitor.py` first ran and fixed this value into `data/event_monitor_state.json`. This date is written by the script itself on first run and never moves; only filings dated on or after it are ever logged, no matter what a company's SEC API response happens to include.
+
+**Why forward, not more backtesting:** Test 9's v3 re-examination (see above) found a real, cost-clearing effect — negative abnormal returns following 8-K filings in liquid, well-covered large-cap names, surviving declustering, at every horizon (1/5/10/20d), for both item 5.02 and all-items-pooled. But 2019–2026 is fully spent as this test's only evidence window, with no held-back slice: there is no way to validate it on data the designer hasn't already seen. Forward testing on filings that haven't happened yet is the only path left — the same logic that put the value portfolio and volatility-targeting candidates into live forward tests.
+
+**Universe (fixed, rebuilt monthly on a schedule, not on demand):** the 200 most liquid US stocks by trailing 60-day median dollar volume ($ = close × volume), computed from `data/yf_universe.parquet` and cached in `data/event_monitor_universe.csv`. This universe is deliberately the liquid population itself — v3's split (illiquid half not significant anywhere, liquid half significant everywhere) is why this monitor restricts to the top 200 by liquidity from the start, rather than tracking a broad universe and splitting after the fact.
+
+**Data collected (log only — nothing is traded):** for every 8-K filed by a universe member, `ops/event_monitor.py` records the ticker, filing date, item code(s), the filer's trailing dollar-volume rank at filing time, and — as those dates arrive — the 1/5/10/20 trading-day forward return from the first open after filing (open[entry+h]/open[entry]-1, computed from live Alpaca daily bars, matching `event_study_v2.py`/`v3.py`'s entry convention exactly for comparability).
+
+**Specific prediction (matching the in-sample v3 finding, not re-derived):** negative abnormal returns following 8-K filings in this universe, magnitude roughly **-0.09% to -1.09%** depending on horizon (1d smallest, 20d largest) and item scope (5.02 stronger than all-items pooled) — same direction and same rough order of magnitude v3 found on the sealed 2019-2026 window.
+
+**Success criterion (binding, fixed in advance):** analysis will decluster the accumulated log first (keep only the first 8-K per ticker in any 10-trading-day window, same window as Test 14's Check 1 and v3 — not retuned here), then evaluate the all-items-pooled 10-day horizon (v3's most robust single horizon: t=-7.66 all-items, t=-4.90 item 5.02) once **at least 100 declustered events** have accumulated:
+- **SURVIVED:** mean abnormal return is negative with **t < -2**, magnitude within the same order of magnitude as v3 (roughly -0.1% to -1.1%) → forward-confirmed, genuine finding.
+- **FAILED TO REPLICATE:** at that same 100-event threshold, **\|t\| ≤ 2 or the sign is positive** → v3's finding did not survive out-of-sample replication, joining Test 14's 1-day sentiment effect and Test 15's volatility targeting as an in-sample/practice-window result that did not hold up. Logged and stopped, not re-tuned.
+- **No conclusion before 100 declustered events accumulate** — interim readings are informational only, exactly like the value portfolio's monthly observation count before ~192.
+
+**Commitment:** this specification — universe definition, the 10-trading-day decluster window, the 100-event threshold, the 10-day horizon as the primary read, and the t>2 bar — is fixed as of 2026-08-03 and will not be modified in response to incoming filings or interim readings. Changing any of it after seeing partial results would reintroduce exactly the data-mining risk this research program exists to avoid.
+
+Script: `ops/event_monitor.py` (daily, log-only — universe rebuild, EDGAR fetch, forward-return backfill). Log: `data/event_forward_log.parquet`.
+
 ---
 
 ## Test 11 — Fugazzi retest (prior CAPM/Jensen's-alpha stock-picking exercise) — **REJECTED** (positive but not significant; ~20% hindsight-driven)
