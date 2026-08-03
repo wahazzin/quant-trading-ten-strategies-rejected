@@ -113,16 +113,26 @@ for sym in sorted(symbols):
     if existing is not None and abs(existing["quantity"] - held) < 0.5:
         continue  # already correctly journaled
 
-    filled = [o for o in client.get_closed_orders(sym) if o.get("filled_qty") and float(o["filled_qty"]) > 0]
+    # Check BOTH closed (fully filled) orders AND still-open orders that are
+    # PARTIALLY filled -- an order stays "open" in Alpaca's API while partially
+    # filled, so a closed-orders-only search misses exactly this case (it did,
+    # the first time this ran: 5 partial fills went unjournaled because none of
+    # their orders had closed yet).
+    candidates = (client.get_closed_orders(sym) + client.get_open_orders_raw(sym))
+    filled = [o for o in candidates if o.get("filled_qty") and float(o["filled_qty"]) > 0]
     if not filled:
         print(f"  {sym}: broker shows {held} shares but no filled order found -- skipping (manual check needed)")
         continue
     latest = max(filled, key=lambda o: o["filled_at"])
     fill_time = datetime.fromisoformat(latest["filled_at"].replace("Z", "+00:00"))
-    journal.record_entry_fill(symbol=sym, shares=float(latest["filled_qty"]),
+    already_journaled = existing["quantity"] if existing is not None else 0.0
+    new_qty = float(latest["filled_qty"]) - already_journaled
+    if new_qty <= 0:
+        continue
+    journal.record_entry_fill(symbol=sym, shares=new_qty,
                                price=float(latest["filled_avg_price"]), fill_time=fill_time)
-    print(f"  {sym}: journaled catch-up fill -- {latest['filled_qty']} shares @ {latest['filled_avg_price']} "
-          f"(order {latest['id']}, filled {latest['filled_at']})")
+    print(f"  {sym}: journaled catch-up fill -- {new_qty:g} shares @ {latest['filled_avg_price']} "
+          f"(order {latest['id']}, status={latest.get('status')}, filled_qty={latest['filled_qty']})")
     caught_up_any = True
 if not caught_up_any:
     print("  (nothing to catch up -- all broker positions already journaled)")

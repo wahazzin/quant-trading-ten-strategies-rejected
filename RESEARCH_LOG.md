@@ -120,16 +120,36 @@ yfinance sample** (final universe used for all factor tests, `data/yf_universe.p
 
 ---
 
-## Test 9 — SEC 8-K event study — **REJECTED** (real but uneconomic)
-- Scripts: `event_study.py` (v1, confounded), `event_study_v2.py` (corrected); data via `fetch_edgar_cik_map.py`, `fetch_edgar_8k_bulk.py`, `fetch_edgar_8k_fill_gaps.py`
+## Test 9 — SEC 8-K event study — **REJECTED originally on cost grounds → liquid/item-5.02 subset REVERSES under corrected cost basis (see v3 below); illiquid subset and the original small-cap thesis remain dead**
+- Scripts: `event_study.py` (v1, confounded), `event_study_v2.py` (corrected), `event_study_v3.py` (re-examined under Alpaca's real cost basis); data via `fetch_edgar_cik_map.py`, `fetch_edgar_8k_bulk.py`, `fetch_edgar_8k_fill_gaps.py`
 - Universe: 1,807 filers, 124,419 events with usable forward-return windows, 2019-01 onward
 - **v1 methodology error, caught and corrected:** abnormal return was defined as stock return minus SPY return. Our universe underperformed SPY by ~5%/yr as a baseline, so the apparent "event effect" was largely the size premium running backwards. v2 replaced the benchmark with a matched non-event control (each stock's own mean forward return from days not within 20 trading days after any of its 8-K filings), differencing out idiosyncratic drift without a market benchmark.
 - v2 pooled result: only the 10-day horizon significant (mean adjusted AR **-0.171%**, t=**-2.77**) — below the 0.2% round-trip cost bar.
 - Best item code: **5.02** (executive/director departures), 10d **-0.406%** (t=-3.14), 20d **-0.412%** (t=-2.25) — clears the cost bar on paper.
-- **Economic reality check at account size:** ~$470 position (50k SEK ÷ 10) → $2 commission = 0.43% + ~0.20% spread = **0.63% total cost vs 0.41% edge. Net negative before the signal even has to be real.** Would require ~200,000 SEK to become marginally economic.
+- **Economic reality check at account size (2026-07, IBKR):** ~$470 position (50k SEK ÷ 10) → $2 commission = 0.43% + ~0.20% spread = **0.63% total cost vs 0.41% edge. Net negative before the signal even has to be real.** Would require ~200,000 SEK to become marginally economic.
 - Size hypothesis **reversed**: the well-covered (high dollar-volume) half showed stronger and more persistent effects than the under-covered half — the opposite of the project's original small-cap edge thesis.
-- Caveat: t-statistics are inflated by event clustering (8-Ks bunch in earnings season, so overlapping 20-day windows are far from independent) and by a control-group selection issue (frequent filers have few "clean" days, so their baseline is drawn from unusually quiet periods).
-- Verdict: effects are real but too small to trade at this account size, and the methodology has unresolved confounds. Rejected.
+- Caveat (v2): t-statistics are inflated by event clustering (8-Ks bunch in earnings season, so overlapping 20-day windows are far from independent) and by a control-group selection issue (frequent filers have few "clean" days, so their baseline is drawn from unusually quiet periods).
+- v2 verdict at the time: effects are real but too small to trade at this account size, and the clustering caveat was flagged but never corrected for. Rejected.
+
+**v3 — re-examination under the corrected cost basis (`event_study_v3.py`, triggered SOLELY by the Alpaca cost-model correction found migrating the forward test — not by any dissatisfaction with the v2 verdict; see ROADMAP.md constraint C1):** applies the two corrections Test 14 found necessary and v2 had flagged but never applied — declustering (keep only the first 8-K per ticker in any 10-trading-day window, same window as Test 14's Check 1, not retuned here) and a liquidity split (median trailing-60-day $ volume, reusing v2's own size proxy). Same 2019-2026 evidence window as v2 — **not fresh data; no new holdout was spent, because none remained to spend.**
+
+- **Declustering:** all items 124,419 → 79,461 events (63.9% survive); item 5.02 alone 21,606 → 14,259 (66.0% survive). Unlike Test 14's sentiment effect (which lost significance entirely once declustered, t=-4.02→-1.60), **this effect survives declustering intact.**
+- **Liquidity split reverses the earlier finding's tradeability, in the OPPOSITE direction from Test 14:** the **illiquid half is not significant at any horizon**, for either item 5.02 or all items pooled (all \|t\| < 2). The **liquid half is significant at every horizon, for both scopes**:
+
+| Scope | Horizon | n | Mean adj. AR | t-stat | vs. real 0.009% cost |
+|---|---|---|---|---|---|
+| All items, liquid half | 1d | 39,009 | -0.091% | -4.08 | exceeds real cost |
+| All items, liquid half | 5d | 38,912 | -0.145% | -3.28 | exceeds real cost |
+| All items, liquid half | 10d | 38,797 | -0.425% | -7.66 | exceeds real cost |
+| All items, liquid half | 20d | 38,511 | -0.694% | -8.90 | exceeds real cost, and the old 0.63% assumption |
+| Item 5.02, liquid half | 1d | 6,935 | -0.188% | -4.36 | exceeds real cost |
+| Item 5.02, liquid half | 5d | 6,908 | -0.296% | -3.09 | exceeds real cost |
+| Item 5.02, liquid half | 10d | 6,873 | -0.648% | -4.90 | exceeds real cost, and the old 0.63% assumption |
+| Item 5.02, liquid half | 20d | 6,813 | -1.088% | -6.05 | exceeds real cost, and the old 0.63% assumption |
+
+- **What changed and what didn't:** the original rejection had two independent legs — "too small to clear costs" and an unresolved clustering caveat. The cost leg is now moot (real cost ~0.009% vs. a ~0.4-1.1% effect — cleared by 10-100x, and the 10d/20d item-5.02 numbers even clear the *old* 0.63% assumption). The clustering leg is now resolved and the effect survives it. **But the project's original edge thesis — small/under-covered names — is now definitively dead, confirmed rather than newly discovered: the effect lives entirely in the liquid, well-covered half.** This is the opposite tradeable population from what this entire event-study branch was built to find.
+- **Explicit caveats, not resolved by v3:** (1) **no fresh holdout exists for this test** — 2019-2026 was already fully spent as Test 9's one evidence window with no held-back slice, so this does not carry the same out-of-sample weight as Test 8's or Test 15's holdout results; it is a more-rigorous re-read of the same data, not a confirmation on unseen data. (2) The four horizons (1/5/10/20d) are heavily overlapping, not four independent confirmations of the same events. (3) No strategy was built and none should be inferred from this entry — per instruction, this was a correctness re-run under a corrected cost input, not a new search, and it stops here.
+- **Verdict: the liquid/item-5.02 subset no longer meets the bar it was rejected on** (real cost, and now also declustering) — but it is **not validated as a live edge**, both because no holdout backs it and because a well-powered, cross-horizon-consistent effect in liquid large-cap names this strong is exactly the kind of result that deserves independent replication before being trusted, not immediate action. Recorded as a flagged, live question for this project rather than a closed one.
 
 ## Test 10 — Value (Book-to-Market) + Quality (Gross Profitability) — **REJECTED** (underpowered, not disproven)
 - Scripts: `fetch_edgar_fundamentals.py`, `fundamental_test.py`

@@ -83,19 +83,29 @@ class AlpacaClient:
         return {p["symbol"]: float(p["qty"]) for p in resp.json()}
 
     def get_open_orders(self):
-        """Net signed quantity of all open/pending orders per symbol -- positive = net
-        buy exposure working, negative = net sell exposure working. This is the piece
-        that was missing before: a resting order has zero effect on get_positions()
-        until it fills, so any pre-flight check that only looks at positions will
-        recompute the same diff and resubmit on every re-run."""
+        """Net signed REMAINING (unfilled) quantity of all open/pending orders per
+        symbol -- positive = net buy exposure still working, negative = net sell
+        exposure still working. This is the piece that was missing before: a
+        resting order has zero effect on get_positions() until it fills, so any
+        pre-flight check that only looks at positions will recompute the same
+        diff and resubmit on every re-run.
+
+        Uses (qty - filled_qty), NOT qty -- an order stays "open" in Alpaca's API
+        while PARTIALLY filled (status='partially_filled'), and qty is always the
+        original total requested. Using raw qty here double-counts the portion
+        that's already filled and visible in get_positions(): a 4-share order
+        filled 2-of-4 shows position=2 AND (with the bug) pending=4, so
+        reconcile() sees effective=6 against a target of 4 and tries to SELL the
+        difference -- exactly what happened the first time this ran (caught only
+        because Alpaca's own wash-trade protection rejected the erroneous SELLs)."""
         resp = requests.get(f"{self.base_url}/v2/orders", headers=self._headers,
                              params={"status": "open"}, timeout=15)
         resp.raise_for_status()
         pending = {}
         for o in resp.json():
             sym = o["symbol"]
-            qty = float(o["qty"])
-            signed = qty if o["side"] == "buy" else -qty
+            remaining = float(o["qty"]) - float(o.get("filled_qty") or 0)
+            signed = remaining if o["side"] == "buy" else -remaining
             pending[sym] = pending.get(sym, 0.0) + signed
         return pending
 
@@ -109,10 +119,15 @@ class AlpacaClient:
         resp.raise_for_status()
         return resp.json()
 
-    def get_open_orders_raw(self):
-        """Full open-order objects (for cancellation / detailed reporting)."""
-        resp = requests.get(f"{self.base_url}/v2/orders", headers=self._headers,
-                             params={"status": "open"}, timeout=15)
+    def get_open_orders_raw(self, symbol=None):
+        """Full open-order objects, including PARTIALLY FILLED ones still
+        working (for cancellation / detailed reporting / fill catch-up --
+        a partial fill's filled_qty/filled_avg_price are visible here even
+        though the order as a whole is still 'open')."""
+        params = {"status": "open"}
+        if symbol:
+            params["symbols"] = symbol
+        resp = requests.get(f"{self.base_url}/v2/orders", headers=self._headers, params=params, timeout=15)
         resp.raise_for_status()
         return resp.json()
 
