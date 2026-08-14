@@ -254,6 +254,38 @@ Script: `ops/event_monitor.py` (daily, log-only — universe rebuild, EDGAR fetc
 
 ---
 
+## Phase 6c — Forward Test 3: the legacy CAPM accounts — PRE-REGISTERED, IN PROGRESS
+
+**This entry is written before `data/capm_forward_log.parquet` holds a single row.** Nothing below was adjusted after seeing any result.
+
+**Start date:** 2026-08-03 — the same day the value-portfolio inception baseline was corrected and the 8-K monitor's start date was fixed (see Phase 6 and Phase 6b above). `ops/capm_monitor.py` writes this exact baseline into `data/capm_forward_state.json` on its first run and never changes it.
+
+**What's being tracked:** two portfolios that already exist as live Alpaca paper positions, from Test 11 and Test 12 (see below), held as-is with **no rebalancing, ever** — this measures whether the already-chosen positions persist or mean-revert relative to SPY, not an active strategy:
+- **US CAPM** (Test 11 retest): NVDA, AVGO, LLY, WMT, XOM, GOOGL
+- **Swedish CAPM** (Test 12 retest, CAPM-weighted variant): SPOT, ERIC, AZN, ALV, OTLY — entered 2026-02-12 at SPY≈677.67
+
+**Baseline, as of 2026-08-03:**
+
+| | Cost basis | Market value | Return since entry |
+|---|---|---|---|
+| US CAPM | $101,545.21 | $111,007.50 | +9.32% |
+| Swedish CAPM | $100,076.79 | $106,139.14 | +6.06% |
+| SPY (reference, not held) | — | $750.84 | — |
+
+**Why forward, not more backtesting:** Test 11 and Test 12 both found a positive but statistically insignificant edge over SPY (t=1.56 and t=0.56/0.37) — the same "positive point estimate, not significant" pattern as Fugazzi and the pooled sentiment IC scan. These two portfolios are already live, already holding, and cost nothing extra to track — the live benchmark check logged above (Phase 6, Test 12 cross-reference) is the first real data point, and formalizing it as a pre-registered forward test is strictly better than leaving it as an unregistered one-off.
+
+**Hypothesis under test:** concentrated CAPM/beta-weighted stock selection outperforms SPY.
+
+**Success criterion (binding, fixed in advance):** at the 12-month mark (2026-08-03 → 2027-08-03), **both portfolios' total return since the 2026-08-03 baseline must exceed SPY's total return over the identical window.** Both, not either — a single portfolio beating SPY while the other doesn't is a failure of the hypothesis as stated, not a partial win. No conclusion is drawn before the 12-month mark; `ops/capm_monitor.py` reports interim readings as informational only, same convention as the value portfolio's ~192-observation threshold and the 8-K monitor's 100-event threshold.
+
+**Explicit starting-position caveat:** both portfolios are **currently behind SPY** at this forward test's inception — US CAPM's own since-entry return (+9.32%) already trails what SPY did over the same original holding period (not shown here, since that period differs per portfolio), and the live check above showed the Swedish portfolio underperforming SPY by 4.74pp over its actual Feb–Aug holding window. Starting behind is not adjusted for or handicapped against — the 12-month forward window measures total return from here, on an even footing with SPY, with no credit given or taken for what happened before 2026-08-03.
+
+**Commitment:** the two ticker lists, the no-rebalancing rule, the 12-month window, and the "both must beat SPY" criterion are fixed as of 2026-08-03 and will not be modified in response to interim readings.
+
+Script: `ops/capm_monitor.py` (log only — no orders, no position changes). Log: `data/capm_forward_log.parquet`. Uses separate Alpaca paper-account credentials from the value portfolio (`CAPM_US_KEY_ID`/`CAPM_US_SECRET_KEY`, `CAPM_SE_KEY_ID`/`CAPM_SE_SECRET_KEY`) — the script fails loudly, naming exactly which are missing, if either pair isn't in `.env`.
+
+---
+
 ## Test 11 — Fugazzi retest (prior CAPM/Jensen's-alpha stock-picking exercise) — **REJECTED** (positive but not significant; ~20% hindsight-driven)
 - Script: `fugazzi_retest.py`
 - Fixed a bug in 3 of 4 original scripts: they tested on the 2021–2023 TRAINING window by mistake (START_DATE bug), not the intended 2024–2025 walk-forward window. SPY, which the original project never benchmarked against, is added here.

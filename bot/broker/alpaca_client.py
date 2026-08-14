@@ -12,8 +12,13 @@ verifies the credentials/account are reachable (a real GET, not a socket
 handshake) so calling code can check success the same way it did with
 IBKR; disconnect() is a no-op kept for interface parity.
 
-Credentials: APCA_API_KEY_ID / APCA_API_SECRET_KEY from .env -- the same
-pair already used for the Alpaca news API elsewhere in this project.
+Credentials: APCA_API_KEY_ID / APCA_API_SECRET_KEY from .env by default --
+the same pair already used for the Alpaca news API elsewhere in this
+project, and for the value-portfolio forward test. ops/capm_monitor.py
+tracks two OTHER Alpaca paper accounts (different key pairs, read from
+.env as CAPM_US_KEY_ID/CAPM_US_SECRET_KEY and CAPM_SE_KEY_ID/
+CAPM_SE_SECRET_KEY) -- pass api_key/api_secret explicitly to connect to
+one of those instead of the default account.
 """
 import os
 import requests
@@ -29,11 +34,12 @@ DATA_BASE_URL = "https://data.alpaca.markets"
 
 
 class AlpacaClient:
-    def __init__(self, paper=True):
-        self.api_key = os.environ.get("APCA_API_KEY_ID")
-        self.api_secret = os.environ.get("APCA_API_SECRET_KEY")
+    def __init__(self, paper=True, api_key=None, api_secret=None):
+        self.api_key = api_key or os.environ.get("APCA_API_KEY_ID")
+        self.api_secret = api_secret or os.environ.get("APCA_API_SECRET_KEY")
         if not self.api_key or not self.api_secret:
-            raise RuntimeError("APCA_API_KEY_ID / APCA_API_SECRET_KEY not found in .env.")
+            raise RuntimeError("Alpaca API key/secret not found -- pass api_key/api_secret "
+                                "explicitly, or set APCA_API_KEY_ID / APCA_API_SECRET_KEY in .env.")
         self.paper = paper
         self.base_url = PAPER_BASE_URL if paper else LIVE_BASE_URL
         self._headers = {"APCA-API-KEY-ID": self.api_key, "APCA-API-SECRET-KEY": self.api_secret}
@@ -83,6 +89,16 @@ class AlpacaClient:
         resp = requests.get(f"{self.base_url}/v2/positions", headers=self._headers, timeout=15)
         resp.raise_for_status()
         return {p["symbol"]: float(p["qty"]) for p in resp.json()}
+
+    def get_positions_raw(self):
+        """Full position objects as Alpaca returns them (qty, avg_entry_price,
+        market_value, cost_basis, unrealized_pl, unrealized_plpc, ...) -- used
+        by ops/capm_monitor.py, which has no local trade journal for these
+        accounts and reads P&L directly from the broker's own numbers instead
+        of re-deriving them."""
+        resp = requests.get(f"{self.base_url}/v2/positions", headers=self._headers, timeout=15)
+        resp.raise_for_status()
+        return resp.json()
 
     def get_open_orders(self):
         """Net signed REMAINING (unfilled) quantity of all open/pending orders per

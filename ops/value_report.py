@@ -35,7 +35,10 @@ import pandas as pd
 from datetime import datetime, timezone
 
 from bot.broker.alpaca_client import AlpacaClient
+from bot.broker.guard import require_broker
 from bot.journal.db import TradeJournal
+
+require_broker("alpaca")
 
 STATE_PATH = os.path.join("data", "value_portfolio_state.json")
 HOLDINGS_PATH = os.path.join("data", "value_portfolio_previous.csv")
