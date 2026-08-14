@@ -1,3 +1,7 @@
+# RETIRED (2026-08-03) -- IBKR is fully decommissioned; this class is IBKR-specific
+# (wires into ib_async's execDetailsEvent/commissionReportEvent) and is only used by
+# ops/legacy_ibkr/main.py and ops/legacy_ibkr/benchmark_buy.py. See RESEARCH_LOG.md's
+# Phase 6 section. Alpaca fills are journaled directly in ops/value_rebalance.py instead.
 from datetime import datetime, timezone
 
 

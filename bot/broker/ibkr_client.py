@@ -1,3 +1,6 @@
+# RETIRED (2026-08-03) -- IBKR is fully decommissioned; only ops/legacy_ibkr/*.py
+# imports this, each guarded by bot/broker/guard.py's require_broker("ibkr").
+# See RESEARCH_LOG.md's Phase 6 section.
 from ib_async import IB
 from bot.config import IB_HOST, IB_PORT, IB_CLIENT_ID
 

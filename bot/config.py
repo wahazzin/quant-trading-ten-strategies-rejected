@@ -3,12 +3,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# LEGACY (2026-08-02): the project moved the live forward test from IBKR to
-# Alpaca -- see ROADMAP.md constraint C1 and RESEARCH_LOG.md's Phase 6
-# section for why (no locally-running Gateway process for a months-long
-# forward test, and a much cheaper real cost structure). Nothing in ops/
-# imports these anymore; kept only for any one-off IBKR diagnostic script
-# still in the repo (e.g. ops/audit.py) that hasn't been retired.
+# RETIRED (2026-08-03): IBKR is fully decommissioned for this project -- see
+# RESEARCH_LOG.md's Phase 6 section for the incident that made this final
+# (pre-migration GTC orders filled at IBKR after the Alpaca migration was
+# already live, producing duplicate exposure to the same portfolio at both
+# brokers). All IBKR-dependent scripts now live in ops/legacy_ibkr/, each
+# guarded by bot/broker/guard.py's require_broker("ibkr") -- none will run
+# unless ACTIVE_BROKER=ibkr is explicitly set for that one invocation. Kept
+# only because ops/legacy_ibkr/*.py still imports these constants.
 IB_HOST = os.getenv("IB_HOST", "127.0.0.1")
 IB_PORT = int(os.getenv("IB_PORT", 4002))
 IB_CLIENT_ID = int(os.getenv("IB_CLIENT_ID", 1))

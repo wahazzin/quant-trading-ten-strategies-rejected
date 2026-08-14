@@ -26,12 +26,15 @@ just recorded as errors and skipped, same as verify_universe.py does.
 """
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 import time
 import pandas as pd
 from ib_async import Stock
 from bot.broker.ibkr_client import IBKRClient
+from bot.broker.guard import require_broker
+
+require_broker("ibkr")
 
 CANDIDATES = [
     # regional banks

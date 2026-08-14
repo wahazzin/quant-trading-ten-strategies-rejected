@@ -23,11 +23,14 @@ that decision is left to a human.
 """
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from ib_async import Stock, MarketOrder
 
 from bot.broker.ibkr_client import IBKRClient
+from bot.broker.guard import require_broker
+
+require_broker("ibkr")
 from bot.broker.trade_monitor import TradeMonitor
 from bot.broker.fx import FXConverter
 from bot.journal.db import TradeJournal

@@ -15,9 +15,12 @@ the trade journal as a fake "entry".
 """
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from bot.broker.ibkr_client import IBKRClient
+from bot.broker.guard import require_broker
+
+require_broker("ibkr")
 from ib_async import Stock, MarketOrder
 
 client = IBKRClient()

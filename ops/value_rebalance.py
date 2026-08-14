@@ -47,7 +47,10 @@ from datetime import datetime, timezone
 
 from bot.broker.alpaca_client import AlpacaClient
 from bot.broker.reconcile import reconcile, execute_plan
+from bot.broker.guard import require_broker
 from bot.journal.db import TradeJournal
+
+require_broker("alpaca")
 
 TARGET_PATH = os.path.join("data", "value_portfolio_current.csv")
 PREVIOUS_PATH = os.path.join("data", "value_portfolio_previous.csv")

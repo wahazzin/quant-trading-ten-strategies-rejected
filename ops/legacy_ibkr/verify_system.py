@@ -8,11 +8,14 @@ anything else). Five checks, each PASS/FAIL, summarized at the end.
 """
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from bot.journal.db import TradeJournal, Trade, AccountSnapshot, OpenPosition
 from bot.risk.circuit_breaker import RiskManager
 from bot.broker.ibkr_client import IBKRClient
+from bot.broker.guard import require_broker
+
+require_broker("ibkr")
 
 results = {}
 

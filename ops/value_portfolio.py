@@ -29,14 +29,21 @@ Ranking snapshot (universe eligibility + B/M signal) uses the LATEST
 available month in data/yf_universe.parquet, exactly like every prior
 test in this project -- ranking has always been on month-end data, never
 a live intraday quote. Once the top names are selected, price is
-refreshed live from IBKR for THOSE names only (not the full ~800-name
+refreshed live from Alpaca for THOSE names only (not the full ~800-name
 eligible universe) so target_shares/target_value reflect what the
 account can actually transact at today.
 
-PRIIPs note: this portfolio holds only individual US common stocks,
-never ETFs -- SPY itself was rejected by IBKR (error 201) on this
-account, which is exactly why SPY is tracked as a benchmark number
-(ops/value_report.py) and never bought.
+PRIIPs note (historical, IBKR-era): this portfolio holds only
+individual US common stocks, never ETFs -- SPY itself was rejected by
+IBKR (error 201) on this EU-domiciled account, which is exactly why SPY
+is tracked as a benchmark number (ops/value_report.py) and never
+bought. Alpaca is a US broker with no PRIIPs restriction, but the
+stock-only design is kept unchanged -- Value is a stock-selection
+strategy, not an index proxy, so there was never a reason to hold SPY.
+
+Migrated from IBKR to Alpaca (see RESEARCH_LOG.md Phase 6 / ROADMAP.md
+constraint C1) -- no FX conversion needed since Alpaca accounts are
+USD-denominated (the IBKR account required a SEK->USD conversion step).
 """
 import os
 import sys
@@ -44,10 +51,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 import pandas as pd
-from ib_async import Stock
 
-from bot.broker.ibkr_client import IBKRClient
-from bot.broker.fx import FXConverter
+from bot.broker.alpaca_client import AlpacaClient
+from bot.broker.guard import require_broker
+
+require_broker("alpaca")
 
 DATA_PATH = os.path.join("data", "yf_universe.parquet")
 FUND_PATH = os.path.join("data", "edgar_fundamentals.parquet")
@@ -188,27 +196,20 @@ print(f"Top {TOP_N} by Book-to-Market (highest = cheapest), ranked on {latest_mo
 print(sig_df.head(TOP_N).to_string(index=False))
 
 # ============================================================
-# LIVE PRICE REFRESH + SIZING (IBKR)
+# LIVE PRICE REFRESH + SIZING (Alpaca)
 # ============================================================
 print()
 print("=" * 96)
-print("LIVE PRICING + SIZING (IBKR)")
+print("LIVE PRICING + SIZING (Alpaca)")
 print("=" * 96)
-client = IBKRClient()
+client = AlpacaClient(paper=True)
 connected = client.connect()
 print("Connected:", connected)
 if not connected:
-    raise SystemExit("Could not connect to IB Gateway -- cannot size positions without live prices/equity.")
+    raise SystemExit("Could not reach Alpaca -- cannot size positions without live prices/equity.")
 
-ib = client.ib
-ib.sleep(2)
-
-equity = client.get_net_liquidation()
-account_currency = client.get_account_currency()
-print(f"Account equity: {equity:.2f} {account_currency}")
-fx = FXConverter(ib)
-equity_usd = fx.convert(equity, account_currency, INSTRUMENT_CURRENCY)
-print(f"Equity in {INSTRUMENT_CURRENCY}: {equity_usd:.2f}")
+equity_usd = client.get_net_liquidation()
+print(f"Account equity (USD, no FX conversion needed): {equity_usd:.2f}")
 
 target_total = equity_usd * TARGET_EQUITY_PCT
 per_stock_target = target_total / TOP_N
@@ -221,23 +222,16 @@ skipped = []
 for r in sig_df.itertuples(index=False):
     if len(rows) >= TOP_N:
         break
-    contract = Stock(r.ticker, "SMART", INSTRUMENT_CURRENCY)
     try:
-        ib.qualifyContracts(contract)
-        bars = ib.reqHistoricalData(
-            contract, endDateTime="", durationStr="2 D", barSizeSetting="1 day",
-            whatToShow="TRADES", useRTH=True, formatDate=1,
-        )
+        live_price = client.get_last_price(r.ticker)
     except Exception as e:
-        print(f"  SKIP {r.ticker}: could not qualify/fetch live price ({e})")
+        print(f"  SKIP {r.ticker}: could not fetch live price ({e})")
         skipped.append(r.ticker)
         continue
-    if not bars:
-        print(f"  SKIP {r.ticker}: no live bar returned")
+    if not live_price:
+        print(f"  SKIP {r.ticker}: no live price returned")
         skipped.append(r.ticker)
         continue
-
-    live_price = bars[-1].close
     # B/M re-derived at the live price so the reported ratio matches what
     # sizing actually used -- shares outstanding don't move intraday, only
     # price does, so this is a pure rescale of the panel-price ratio.

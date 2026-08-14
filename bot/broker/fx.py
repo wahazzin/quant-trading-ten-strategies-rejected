@@ -1,3 +1,6 @@
+# RETIRED (2026-08-03) -- IBKR is fully decommissioned; only ops/legacy_ibkr/
+# scripts import this (Alpaca is USD-only, no FX conversion needed there).
+# See RESEARCH_LOG.md's Phase 6 section.
 from ib_async import Forex
 
 

@@ -14,7 +14,7 @@ state for a buy-and-hold benchmark position that never turns over.
 """
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 import argparse
 from datetime import datetime, timedelta
@@ -22,6 +22,9 @@ from datetime import datetime, timedelta
 from bot.journal.db import TradeJournal, Trade, AccountSnapshot
 from bot.risk.circuit_breaker import RiskManager
 from bot.broker.ibkr_client import IBKRClient
+from bot.broker.guard import require_broker
+
+require_broker("ibkr")
 from ib_async import Stock
 
 parser = argparse.ArgumentParser(description="Weekly (or N-day) performance report")

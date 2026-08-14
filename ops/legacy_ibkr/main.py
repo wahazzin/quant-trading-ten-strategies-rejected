@@ -9,9 +9,12 @@ What "success" looks like this time (unlike the old fake 14.29 -> 14.29 trade):
 
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from bot.broker.ibkr_client import IBKRClient
+from bot.broker.guard import require_broker
+
+require_broker("ibkr")
 from bot.broker.execution import OrderExecutor
 from bot.broker.trade_monitor import TradeMonitor
 from bot.journal.db import TradeJournal
