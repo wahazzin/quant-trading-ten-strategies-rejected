@@ -1,0 +1,36 @@
+name: CAPM2 Weekly Rebalance
+
+on:
+  schedule:
+    # Monday 16:00 CEST (Stockholm summer time) = 14:00 UTC.
+    # Note: this is a FIXED UTC time, so it will drift to 15:00 local
+    # during Swedish winter time (CET, UTC+1) -- cron has no timezone
+    # concept. Adjust the "14" below by 1 hour around late Oct/late Mar
+    # if exact local time matters to you.
+    - cron: "0 14 * * 1"
+  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab too
+
+jobs:
+  rebalance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r ops/requirements_capm2.txt
+
+      - name: Run weekly reallocation
+        env:
+          ACTIVE_BROKER: alpaca
+          CAPM2_US_KEY_ID: ${{ secrets.CAPM2_US_KEY_ID }}
+          CAPM2_US_SECRET_KEY: ${{ secrets.CAPM2_US_SECRET_KEY }}
+          CAPM2_SE_KEY_ID: ${{ secrets.CAPM2_SE_KEY_ID }}
+          CAPM2_SE_SECRET_KEY: ${{ secrets.CAPM2_SE_SECRET_KEY }}
+          APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
+          APCA_API_SECRET_KEY: ${{ secrets.APCA_API_SECRET_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -u ops/capm2_weekly_rebalance.py

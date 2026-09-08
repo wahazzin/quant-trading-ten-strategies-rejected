@@ -27,10 +27,12 @@ live capital.** That is a legitimate research outcome, not a failure.
 | 0 — Infrastructure (data, broker, storage) | ✅ Complete |
 | 1 — Risk & execution core | ✅ Complete |
 | 2 — Technical / price signals | ✅ Complete — **all rejected** |
-| **3 — Event & sentiment layer** | 🔄 **IN PROGRESS** |
-| 4 — Combination of proven signals | ⬜ Blocked on Phase 3 |
+| 3 — Event & sentiment layer | ✅ Complete — 8-K liquid-name effect now a live forward test (Phase 6b); news/shock sentiment rejected (Tests 13-14) |
+| 3b — Regime-switching + RSI revisit | ✅ Complete — all rejected (Tests 16-19) |
+| **Engine build** (dynamic universe, pluggable signals, capacity gate) | 🔄 **IN PROGRESS** — see ENGINE_ARCHITECTURE.md |
+| 4 — Combination of proven signals | ⬜ Blocked — 0 validated signals; value_bm is unproven, forward-testing only |
 | 5 — Monitoring & decay detection | ⬜ Not started |
-| 6 — Paper trading (30–40 trading days) | ⬜ Not started |
+| 6 — Paper trading (30–40 trading days) | 🔄 Three forward tests running: value portfolio, 8-K monitor, CAPM benchmarks |
 | 7 — Go / no-go decision | ⬜ Not started |
 
 ---
@@ -208,10 +210,19 @@ currently supports.
 
 ## 9. EXPLICITLY REJECTED — DO NOT REVISIT
 
-**Tested and rejected** (details in `RESEARCH_LOG.md`):
+**Tested and rejected** (details in `RESEARCH_LOG.md` — 19 total):
 SMA crossover · RSI mean-reversion · 20-day z-score reversal (both formulations,
 both universe sizes) · short-term reversal (revealed as market beta) ·
-momentum 12-1 (alpha t=0.13) · low volatility (holdout alpha −5.60%)
+momentum 12-1 (alpha t=0.13) · low volatility (holdout alpha −5.60%) ·
+fundamental value/quality (underpowered, t=1.52) · Fugazzi & Swedish CAPM
+retests (positive but t<2) · pooled news-sentiment IC (clean null) ·
+conditional shock-day sentiment (failed independence/liquidity checks) ·
+volatility targeting (holdout Sharpe ratio 0.97, alpha t collapsed to 0.51) ·
+regime classifier (+2.3pp vs +5pp bar) · RSI-conditioned-on-regime, 3x ·
+RSI portfolio simulation (only 22% of signals tradeable, alpha −3.14%).
+**Live/open, not rejected:** 8-K liquid-name event effect (Phase 6b forward
+test, pre-registered, awaiting 100 declustered events) and value/B-M
+(Phase 6 forward test, unproven — underpowered in backtest, not disproven).
 
 **Rejected without testing, with reasons:**
 - *Intraday / minute-level trading* — violates C1 and C2; competes with HFT;
@@ -280,7 +291,82 @@ versions for one library's convenience functions, all of which (IC analysis,
 quantile spreads, turnover) are already hand-built and working in this
 codebase.
 
+## 11. FLAGGED, NOT ACTIVE — CANDIDATE FUTURE HYPOTHESES
+
+Ideas raised but deliberately not started. Listed so they aren't re-raised
+as if new, and aren't forgotten either.
+
+**Social media sentiment (StockTwits, not Twitter/Facebook).** Retail
+sentiment can lead news-derived sentiment (Tests 13-14 tested news only,
+both clean/failed). Twitter/X API is now paywalled for backtesting;
+Facebook has no usable public API; building an unauthorized scraper is off
+the table (ToS). StockTwits has a real, legal, stock-specific API and is
+the standard academic proxy for retail sentiment. **Trigger to start:**
+none yet — not scheduled, just the honest next candidate if sentiment is
+revisited. Same rigor as Tests 13-14 required (declustering, SPY-drift
+control) would still apply, plus a new confound to control for: pump-and-
+dump/bot coordination can fake predictive-looking sentiment.
+
+**Options-derived positioning (implied vol skew, put/call skew) — verdict:
+MAYBE.** Confirmed after reading the full source (Aug 2026): construction is
+`(OTM put IV - OTM call IV) / ATM IV` on delta-matched strikes, classified
+into a 4-quadrant grid (price trend x skew) -- price and positioning
+agreeing tells you nothing, price and positioning DISAGREEING (falling
+price + upside options bid, or rising price + downside options bid) is the
+only case worth testing. Worth pursuing because: (1) genuinely new data
+source, none of the 19 rejected tests used options data; (2) real academic
+grounding (informed options positioning preceding price moves is a
+published finding -- verify citations independently, not confirmed here);
+(3) the source material's own documented pitfalls (index put/call ratio is
+unusable due to tail-strike windowing; skew must be raw vol points across
+sectors, normalized within a sector; one bad options quote can invert an
+entire name's reading; earnings-week skew is event premium, not
+sentiment) are useful engineering warnings regardless of the source.
+NOT confirmed: any actual backtested edge -- the source provides a
+heuristic reading framework (4 quadrants + qualitative verdict), not a
+measured expectancy, and its own performance claims are unverifiable
+marketing for a paid subscription, not evidence. Do not adopt the
+quadrant->action mapping as-is; it has to earn the same t-stat/monkey-
+test/holdout bar as every other candidate.
+
+Raised via a third-party "skew map" article/course with unverifiable
+performance claims ($144k, then separately $65K->$300K+ / $129K / "9x
+S&P" for a paid $69/mo community) — the marketing claims are not evidence
+and are not being relied on. **What would actually need doing, not
+started:** source real options data (not free like yfinance — CBOE, ORATS,
+or similar), define a specific pre-registered signal (e.g. skew vs.
+realized-vol divergence), and run it through the same pipeline (monkey
+test, cost model, holdout) as every other candidate. **Trigger to start:**
+a deliberate decision to spend on options data, not just interest in the
+idea.
+
+**Politician / corporate insider transaction disclosures (e.g. Quiver
+Quant) — verdict: WEAK MAYBE.** Raised via a generic Claude-prompting
+workflow guide, not a strategy source. Genuinely a data source none of
+the 19 tests used, but weaker candidate than options skew: academic
+evidence on congressional-trading predictive power is mixed, and the
+signal is now heavily crowded (multiple ETFs already mirror disclosed
+Congress trades), which tends to arbitrage away edge that existed.
+**Trigger to start:** none — noted so it isn't re-raised as new, not
+scheduled ahead of the options-skew candidate.
+
+## 12. IDEAS WORTH STEALING (not hypotheses, not tests -- design/engineering
+patterns noticed while reviewing external material, logged here so they
+aren't lost or re-suggested as new)
+
+**Notifications should default to silence, not report every cycle.**
+Source: a third-party "Grok Bot Desk" guide (Aug 2026) -- unrelated to any
+trading strategy, but the design principle is sound: most alert systems
+train you to ignore them by messaging constantly. Its "head of desk" role
+only sends a message when something clears a genuinely high bar, and
+outputs nothing (not even a log spam line) otherwise. Applies directly to
+our planned Discord webhook notifications: fills, stop-loss hits, and
+circuit-breaker trips should alert; routine dry-run cycles and "nothing
+happened" should not.
+
 ---
 
-*Last updated: 2026-08-02, after migrating the Phase 6 forward test from IBKR
-to Alpaca.*
+*Last updated: 2026-08-14, after Tests 16-19 (regime-switching + RSI) were
+rejected and the engine build (bot/signals, bot/monitor/attribution,
+bot/screener/universe) began. See ENGINE_ARCHITECTURE.md for the current
+build. Combiner (bot/combiner/combiner.py) written next.*

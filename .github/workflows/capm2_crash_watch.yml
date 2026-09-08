@@ -1,0 +1,35 @@
+name: CAPM2 Hourly Crash Watch
+
+on:
+  schedule:
+    # Every hour, every day. Wasteful-looking but harmless: the script
+    # itself calls Alpaca's clock endpoint and no-ops immediately
+    # outside market hours -- same "safe to over-schedule" design as
+    # the old Windows Task Scheduler version.
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  crash_watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r ops/requirements_capm2.txt
+
+      - name: Run crash watch
+        env:
+          ACTIVE_BROKER: alpaca
+          CAPM2_US_KEY_ID: ${{ secrets.CAPM2_US_KEY_ID }}
+          CAPM2_US_SECRET_KEY: ${{ secrets.CAPM2_US_SECRET_KEY }}
+          CAPM2_SE_KEY_ID: ${{ secrets.CAPM2_SE_KEY_ID }}
+          CAPM2_SE_SECRET_KEY: ${{ secrets.CAPM2_SE_SECRET_KEY }}
+          APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
+          APCA_API_SECRET_KEY: ${{ secrets.APCA_API_SECRET_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -u ops/capm2_hourly_crash_watch.py

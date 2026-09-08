@@ -551,3 +551,109 @@ believed.** This is now a required step for every future strategy test in
 this project.
 
 **Running total: nineteen hypothesis classes tested, nineteen rejected.**
+
+---
+
+## Test 20 / Phase 6d — Performance-weighted reallocation of the CAPM
+## portfolios — PRE-REGISTERED, NOT YET STARTED
+
+**This entry is written before any reallocation has happened.** Nothing
+below has been adjusted after seeing a result, because no result exists.
+
+**Origin:** Yassin's own instinct, from prior school-project experience --
+if some names in a fixed watchlist are outperforming and others are
+underperforming, tilting allocation toward the strong ones should capture
+that instead of sitting flat. Flagged before building anything because it
+overlaps two already-rejected hypotheses in this log: Test 7 (Momentum
+12-1, alpha t=0.13) and Test 15 (volatility targeting / dynamic exposure,
+died in holdout). This is not automatically the same thing -- different
+lookback, different mechanism (cross-sectional reallocation within a fixed
+11-name universe, not a single-instrument exposure dial) -- but the prior
+is genuinely low given the pattern rate so far (0/19).
+
+**Why this CANNOT be backtested honestly on these 11 tickers.** The
+designer already knows their 2024-2026 outcomes in detail -- OTLY's 55.93%
+in-sample loss then a late-July 2026 spike (Test 12's live check), NVDA
+and AVGO's run, GOOGL's news-sentiment coverage dominance (Test 13). Any
+backtest on this same historical window for this same 11-name universe
+would be exactly the kind of designer-contaminated result the
+Evidence-Boundary section above exists to prevent. **This must be run as a
+forward-only test, same pattern as Phase 6/6b/6c** -- not a backtest at
+all.
+
+**Universe (unchanged from Phase 6c, deliberately not expanded):**
+- US group: NVDA, AVGO, LLY, WMT, XOM, GOOGL
+- Swedish group: SPOT, ERIC, AZN, ALV, OTLY
+
+**Exact specification (fixed as of the date this is activated):**
+- **Signal:** trailing 3-month total return, computed separately within
+  each group (US names never compete against Swedish names for weight).
+  Chosen deliberately different from Test 7's 12-1 month window to avoid
+  re-running the identical rejected test with new paint.
+- **Allocation formula:** within each group, weight_i = z-score of
+  trailing 3-month return, floored at 0 (an underperformer never gets
+  shorted or driven to negative weight -- it is cut to ZERO allocation
+  in that group, not merely reduced), then normalized to sum to 100%
+  within the group. **Hard cap: no single name may exceed 40% of its
+  group's weight**, re-normalizing the remainder across the others if the
+  cap binds. This directly targets the exact failure mode Test 12's live
+  check documented: OTLY reaching 29.3% weight from raw beta and then
+  dominating the portfolio's entire return, for better or worse. A cap
+  does not fix the underlying hypothesis if it's wrong, but it prevents
+  one name's noise from masquerading as the whole test's result.
+  **Cap-shortfall rule (caught by unit-testing the pure allocation
+  function before any live use, not discovered live):** when too few
+  winning names exist to reach 100% invested while respecting the cap
+  (e.g. only 2 winners at a 40% cap maxes out at 80%), the shortfall is
+  left as CASH -- never forced into a zero-floored underperformer, never
+  allowed to push a winner above the cap. Implemented in
+  `bot/strategy/capm2_allocation.py`, covered by unit tests.
+- **Two-speed check/action cadence, not one (revised from the original
+  monthly-only draft after discussion):**
+  1. **Hourly crash watch (market hours only):** checks every held name
+     for an unusually large single-day drop combined with a negative
+     shadow-sentiment reading (news veto and/or social veto, whichever
+     is working -- see their own log-only status elsewhere in this
+     file). If triggered, that name's allocation is cut to zero
+     IMMEDIATELY, outside the normal weekly cycle -- not held until the
+     next scheduled rebalance. Exact drop/sentiment thresholds are a
+     TODO before implementation, to be set once and not tuned after
+     seeing results, same discipline as every other threshold in this
+     project.
+  2. **Weekly reallocation:** the full formula above (3-month return,
+     z-score, 40% cap) recalculates and rebalances once a week. Weekly,
+     not monthly, because a full month is long enough for two names to
+     swing the whole portfolio's reading (the concern that motivated
+     this revision). Weekly, not hourly, because reallocating that
+     often would mean trading on noise rather than genuine trend --
+     every trade has a real cost (spread/slippage) even under Alpaca's
+     near-zero commission, and high-frequency reallocation risks the
+     same kind of whipsaw that made short-horizon signals fail
+     elsewhere in this project (Tests 1-6, 17-19).
+- **Cost model:** Alpaca's real cost basis (~0.009% round-trip, confirmed
+  under Phase 6's broker migration).
+
+**Benchmark (three-way, not just SPY):** SPY total return over the
+identical window, AND the current static buy-and-hold CAPM baseline
+(Phase 6c) computed in parallel on paper from the same starting date, so
+this test answers "does reallocating beat both doing nothing AND the
+index," not just the index.
+
+**Success criterion (binding, fixed in advance):** at the 12-month mark,
+the reallocated portfolio's total return must exceed BOTH SPY's total
+return over the identical window AND what the static Phase 6c holding
+would have returned. Beating only one of the two is not a pass. Interim
+readings before 12 months are informational only, same convention as
+every other forward test in this project.
+
+**Accounts: two NEW, separate Alpaca paper accounts** (Yassin has
+several already unused), running independently of the existing Phase 6c
+accounts. Phase 6c continues completely untouched, exactly as originally
+committed on 2026-08-03 -- no early termination, no conflict, both tests
+complete honestly in parallel. Env vars: `CAPM2_US_KEY_ID` /
+`CAPM2_US_SECRET_KEY`, `CAPM2_SE_KEY_ID` / `CAPM2_SE_SECRET_KEY` (naming
+mirrors the existing CAPM_US/CAPM_SE convention, "2" distinguishes the
+new reallocation-test accounts from the original static ones).
+
+Nothing above is implemented yet. This entry exists so the exact rules
+are fixed BEFORE the code is written.

@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 import time
 import pandas as pd
 from ib_async import Stock
-from bot.broker.ibkr_client import IBKRClient
+from ops.legacy_ibkr.ibkr_client import IBKRClient
 from bot.broker.guard import require_broker
 
 require_broker("ibkr")

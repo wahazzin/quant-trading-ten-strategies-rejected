@@ -49,6 +49,7 @@ from bot.broker.alpaca_client import AlpacaClient
 from bot.broker.reconcile import reconcile, execute_plan
 from bot.broker.guard import require_broker
 from bot.journal.db import TradeJournal
+from bot.monitor.discord_notify import notify_fill
 
 require_broker("alpaca")
 
@@ -135,6 +136,7 @@ for sym in sorted(symbols):
         continue
     journal.record_entry_fill(symbol=sym, shares=new_qty,
                                price=float(latest["filled_avg_price"]), fill_time=fill_time)
+    notify_fill(sym, "buy", new_qty, float(latest["filled_avg_price"]))
     print(f"  {sym}: journaled catch-up fill -- {new_qty:g} shares @ {latest['filled_avg_price']} "
           f"(order {latest['id']}, status={latest.get('status')}, filled_qty={latest['filled_qty']})")
     caught_up_any = True
@@ -168,6 +170,7 @@ def place_order(symbol, action, qty):
                 journal.record_entry_fill(symbol=symbol, shares=shares, price=price, fill_time=fill_time)
             else:
                 journal.record_exit_fill(symbol=symbol, shares=shares, price=price, fill_time=fill_time)
+            notify_fill(symbol, action.lower(), shares, price)
             print(f"  FILLED {action} {shares:g} {symbol} @ {price:.4f}")
             return {"status": "filled", "shares": shares, "price": price}
         if status_resp["status"] in ("canceled", "expired", "rejected"):

@@ -1,7 +1,7 @@
 # RETIRED (2026-08-03) -- IBKR is fully decommissioned; only ops/legacy_ibkr/main.py
 # imports this. See RESEARCH_LOG.md's Phase 6 section.
 from ib_async import Stock, MarketOrder, StopOrder, LimitOrder
-from bot.broker.ibkr_client import IBKRClient
+from ops.legacy_ibkr.ibkr_client import IBKRClient
 from bot.broker.fx import FXConverter
 from bot.risk.position_sizing import calculate_position_size
 

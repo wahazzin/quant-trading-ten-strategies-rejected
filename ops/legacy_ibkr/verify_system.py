@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from bot.journal.db import TradeJournal, Trade, AccountSnapshot, OpenPosition
 from bot.risk.circuit_breaker import RiskManager
-from bot.broker.ibkr_client import IBKRClient
+from ops.legacy_ibkr.ibkr_client import IBKRClient
 from bot.broker.guard import require_broker
 
 require_broker("ibkr")

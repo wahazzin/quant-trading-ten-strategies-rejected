@@ -19,7 +19,7 @@ import time
 import pandas as pd
 import numpy as np
 from ib_async import Stock
-from bot.broker.ibkr_client import IBKRClient
+from ops.legacy_ibkr.ibkr_client import IBKRClient
 from bot.broker.guard import require_broker
 
 require_broker("ibkr")

@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 
 from bot.journal.db import TradeJournal, Trade, AccountSnapshot
 from bot.risk.circuit_breaker import RiskManager
-from bot.broker.ibkr_client import IBKRClient
+from ops.legacy_ibkr.ibkr_client import IBKRClient
 from bot.broker.guard import require_broker
 
 require_broker("ibkr")
