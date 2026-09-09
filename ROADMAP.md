@@ -350,6 +350,26 @@ Congress trades), which tends to arbitrage away edge that existed.
 **Trigger to start:** none — noted so it isn't re-raised as new, not
 scheduled ahead of the options-skew candidate.
 
+**Test 20's z-score is relative-to-group, not absolute-return — flagged as
+a possible refinement, not a fix to apply now.** Observed live in Test
+20/Phase 6d's first real weekly rebalance (2026-09, US group): LLY got a
+20% allocation despite a NEGATIVE trailing 3-month return (-2.28%),
+because it was still slightly above that week's group average (-2.28%
+group mean, dragged down by WMT at -11.47% and others). The pre-registered
+rule floors the Z-SCORE at 0 ("underperformer" = below-group-average),
+not the raw return — so in a quarter where every name in a group is down,
+the "winner" can still be a net loser, and it still receives real capital.
+This is NOT being changed in the live Test 20 — the rule was pre-registered
+and is already running with real orders; changing it now because we don't
+like this week's specific output is exactly the post-hoc parameter-picking
+Rule 1 exists to prevent. **Candidate future test, not yet started:** a
+variant requiring BOTH an above-group-average z-score AND a genuinely
+positive absolute return before any weight is assigned (a stock with
+neither would fall to cash, same treatment as the existing cap-shortfall
+cash rule). **Trigger to start:** a deliberate decision to pre-register
+this as its own test (working name: Test 21) once Test 20's 12-month
+window completes — not a modification to Test 20 itself.
+
 ## 12. IDEAS WORTH STEALING (not hypotheses, not tests -- design/engineering
 patterns noticed while reviewing external material, logged here so they
 aren't lost or re-suggested as new)
