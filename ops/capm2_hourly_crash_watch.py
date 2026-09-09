@@ -38,7 +38,7 @@ from bot.broker.guard import require_broker
 from bot.strategy.capm2_allocation import check_crash
 from bot.strategy.capm2_universe import GROUPS
 from bot.monitor.sentiment_veto import SentimentVeto
-from bot.monitor.discord_notify import notify_crash_cut
+from bot.monitor.discord_notify import notify_crash_cut, notify_fill
 
 require_broker("alpaca")
 
@@ -75,6 +75,43 @@ def todays_return(client, ticker):
 sentiment_veto = SentimentVeto(lookback_days=1)
 empty_price_df = pd.DataFrame(columns=["date"])
 
+FILL_CATCHUP_LOOKBACK_MINUTES = 75  # > the 60-min schedule interval, so a
+                                     # fill is never missed between two
+                                     # consecutive hourly runs -- the small
+                                     # overlap means a fill landing right at
+                                     # the boundary could rarely get notified
+                                     # twice; a stray duplicate Discord ping
+                                     # is a minor, accepted tradeoff against
+                                     # the alternative of silently missing a
+                                     # real fill. No local state file is used
+                                     # to dedupe further -- GitHub Actions
+                                     # tears down the container after every
+                                     # run, so anything written to disk here
+                                     # would not survive to the next run
+                                     # anyway; Alpaca's own filled_at
+                                     # timestamp is the only durable source
+                                     # of truth available.
+
+
+def notify_recent_fills(client, symbols):
+    """Catches fills for orders that were still PENDING when
+    capm2_weekly_rebalance.py's own short polling window gave up (e.g.
+    submitted while markets were closed) -- this hourly script already
+    connects to both accounts every cycle regardless of crash-watch
+    logic, so it is the natural place to close that gap."""
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=FILL_CATCHUP_LOOKBACK_MINUTES)
+    for sym in symbols:
+        for o in client.get_closed_orders(symbol=sym, limit=10):
+            if o.get("status") != "filled" or not o.get("filled_at"):
+                continue
+            filled_at = datetime.fromisoformat(o["filled_at"].replace("Z", "+00:00"))
+            if filled_at < cutoff:
+                continue
+            qty = float(o["filled_qty"])
+            price = float(o["filled_avg_price"])
+            notify_fill(sym, o["side"], int(qty), price)
+            print(f"  [catch-up] {sym}: notified fill -- {o['side']} {qty:g} @ {price:.2f}")
+
 
 def place_crash_sell(client, symbol, qty):
     """Immediate-priority sell (tif='day', not 'gtc') -- a crash cut is
@@ -103,6 +140,9 @@ for key, spec in GROUPS.items():
     if not client.connect():
         print("  Could not reach this account -- skipping this run.")
         continue
+
+    if not args.dry_run:
+        notify_recent_fills(client, spec["tickers"])
 
     if not client.is_market_open().get("is_open"):
         print("  Market closed -- nothing to check this cycle.")
