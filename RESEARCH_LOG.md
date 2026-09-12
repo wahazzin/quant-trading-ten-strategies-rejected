@@ -657,3 +657,60 @@ new reallocation-test accounts from the original static ones).
 
 Nothing above is implemented yet. This entry exists so the exact rules
 are fixed BEFORE the code is written.
+
+---
+
+## Phase 6e — Forward Log: ForexFactory economic calendar — LOG-ONLY, IN PROGRESS
+
+**This entry is written before `data/ff_calendar_log.csv` holds a single row.**
+Nothing below was adjusted after seeing any result, because no result exists.
+
+**This is NOT a trading signal, NOT a hypothesis test, and does not touch
+any live account.** It is pure data collection, same tier as Phase 6b's
+8-K monitor before it had accumulated enough events to evaluate. No
+CAPM2 script, no crash-watch, no reallocation logic reads from this log.
+
+**Why this data source, and why now:** raised by Yassin in the context of
+current AI-driven market volatility -- the concern that fast-moving,
+high-impact macro/scheduled events could catch a slow-reacting system
+off guard. This is a genuinely different data TYPE than anything already
+tested: Tests 13/14 tested reactive text sentiment (news headlines,
+scored after the fact); this is a *known-in-advance schedule* of when
+high-impact economic releases (NFP, CPI, FOMC, etc.) are expected, with
+ForexFactory's own low/medium/high impact rating attached. Structurally
+distinct from a sentiment signal -- it answers "when is volatility likely
+to spike" rather than "was this headline good or bad."
+
+**Data source:** `forexfactory.com/calendar` -- public, server-rendered
+HTML, no login wall, no paywall. `robots.txt` sets zero `Disallow` rules
+for any path. No official API exists; a long-running community ecosystem
+of scrapers (GitHub repos, npm packages, third-party actors) has scraped
+this same public calendar page for years with no visible enforcement
+action, a materially different risk profile than the already-declined
+Twitter/X scraping idea (ROADMAP.md Section 11), which sits behind an
+aggressively-enforced anti-scraping wall. Access kept deliberately
+low-frequency (once per day, plain `requests`, no headless browser, no
+login) specifically to stay a good citizen of a free public resource.
+
+**Data collected (log only):** for every calendar event scraped, records
+event_id, date, time, currency, impact level (`high`/`medium`/`low`/
+`non-economic`, from ForexFactory's own red/orange/yellow/grey rating),
+event title, actual, forecast, and previous values, plus the scrape
+timestamp. Deduplicated on event_id so re-running the same day doesn't
+create duplicate rows.
+
+**Success criterion: none yet, deliberately.** Unlike every other forward
+test in this log, no hypothesis is being evaluated here -- there isn't
+one specified. This log exists so that IF a specific, falsifiable
+hypothesis is later proposed (e.g. "SPY realized volatility is elevated
+in the 2 hours following a high-impact US release, net of typical
+intraday seasonality"), it can be tested on data collected *before* the
+hypothesis existed, rather than mining this same log after the fact to
+find a pattern. Per Rule 1, no such test is pre-registered today because
+none has been specified yet -- accumulating clean data now is what makes
+a future honest test possible.
+
+Script: `ops/ff_calendar_monitor.py` (daily, log-only). Log:
+`data/ff_calendar_log.csv`. No secrets or broker credentials required --
+this reads a public webpage only.
+

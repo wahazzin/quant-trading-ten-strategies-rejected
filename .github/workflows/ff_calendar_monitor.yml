@@ -1,0 +1,37 @@
+name: Phase 6e ForexFactory Calendar Monitor (log-only)
+
+on:
+  schedule:
+    # Once daily, 06:00 UTC -- low frequency, good-citizen access to a
+    # free public page (see RESEARCH_LOG.md Phase 6e). This workflow
+    # NEVER touches any broker account -- no Alpaca secrets are used
+    # here at all, deliberately, since this is pure data collection.
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to commit the updated log file back to the repo
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r ops/requirements_ff_monitor.txt
+
+      - name: Run calendar monitor
+        run: python -u ops/ff_calendar_monitor.py
+
+      - name: Commit updated log (if changed)
+        run: |
+          git config user.name "capm2-bot"
+          git config user.email "actions@github.com"
+          git add data/ff_calendar_log.csv
+          git diff --cached --quiet && echo "No changes to commit" || git commit -m "Update ForexFactory calendar log [automated, log-only]"
+          git push

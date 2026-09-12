@@ -11,3 +11,5 @@ data/*
 .vscode/
 .claude/
 *.log
+
+!data/ff_calendar_log.csv
