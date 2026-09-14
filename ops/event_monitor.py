@@ -66,7 +66,6 @@ UNIVERSE_SIZE = 200
 DOLLAR_VOLUME_LOOKBACK_DAYS = 60
 MIN_LOOKBACK_ROWS = 40  # skip thinly-covered tickers when ranking
 
-PRICE_PATH = os.path.join("data", "yf_universe.parquet")
 CIK_MAP_PATH = os.path.join("data", "cik_map.csv")
 UNIVERSE_CACHE_PATH = os.path.join("data", "event_monitor_universe.csv")
 STATE_PATH = os.path.join("data", "event_monitor_state.json")
@@ -103,6 +102,8 @@ else:
 start_date = monitor_state["start_date"]
 print(f"Forward-test start date (fixed, never moves): {start_date}")
 
+client = AlpacaClient(paper=True)
+client.connect()
 
 # ============================================================
 # UNIVERSE: 200 most liquid names, rebuilt once per calendar month
@@ -110,21 +111,42 @@ print(f"Forward-test start date (fixed, never moves): {start_date}")
 this_month = pd.Timestamp.now().strftime("%Y-%m")
 
 
-def build_universe():
-    price = pd.read_parquet(PRICE_PATH)
-    price["date"] = pd.to_datetime(price["date"])
-    as_of = price["date"].max()
+def build_universe(client):
+    """Rebuilt from LIVE Alpaca data as of 2026-09 (Phase 6b migration off
+    Windows Task Scheduler, see RESEARCH_LOG.md) -- previously read
+    data/yf_universe.parquet, a static historical snapshot deliberately
+    NOT committed to git (README.md: "Price data is not committed... ~197MB").
+    That made this script depend on a file that only exists on one specific
+    machine, which is exactly the dependency this migration exists to
+    remove. Same ranking metric, same universe size, same OTC exclusion
+    (implicit in the original NASDAQ-Trader-sourced universe) -- only the
+    SOURCE of the underlying price data changed, logged transparently in
+    RESEARCH_LOG.md as an infrastructure change, not a hypothesis change,
+    same framing as the IBKR-to-Alpaca broker migration."""
+    candidates = client.get_active_us_equities(exclude_otc=True)
+    end = pd.Timestamp.now(tz="UTC").normalize()
+    start = end - pd.Timedelta(days=int(DOLLAR_VOLUME_LOOKBACK_DAYS * 1.6))  # buffer for weekends/holidays
+    print(f"  Fetching trailing bars for {len(candidates)} candidate tickers "
+          f"(this only happens once per calendar month)...")
+    bars_by_symbol = client.get_multi_daily_bars(candidates, start.date().isoformat(), end.date().isoformat())
+
     rows = []
-    for ticker, g in price.groupby("ticker"):
-        g = g.sort_values("date").tail(DOLLAR_VOLUME_LOOKBACK_DAYS)
-        if len(g) < MIN_LOOKBACK_ROWS:
+    latest_date = None
+    for ticker, bars in bars_by_symbol.items():
+        if len(bars) < MIN_LOOKBACK_ROWS:
             continue
-        dv = float((g["close"] * g["volume"]).median())
+        recent = bars[-DOLLAR_VOLUME_LOOKBACK_DAYS:]
+        dv = float(np.median([b["c"] * b["v"] for b in recent]))
         rows.append({"ticker": ticker, "median_dollar_volume": dv})
+        bar_date = pd.Timestamp(bars[-1]["t"]).tz_localize(None)
+        if latest_date is None or bar_date > latest_date:
+            latest_date = bar_date
+
     ranked = pd.DataFrame(rows).sort_values("median_dollar_volume", ascending=False).reset_index(drop=True)
     ranked = ranked.head(UNIVERSE_SIZE).copy()
     ranked["dollar_volume_rank"] = np.arange(1, len(ranked) + 1)
-    ranked["as_of_date"] = as_of.date().isoformat()
+    ranked["as_of_date"] = (latest_date.date().isoformat() if latest_date is not None
+                             else end.date().isoformat())
     ranked["computed_month"] = this_month
     ranked.to_csv(UNIVERSE_CACHE_PATH, index=False)
     return ranked
@@ -134,13 +156,13 @@ if os.path.exists(UNIVERSE_CACHE_PATH):
     universe = pd.read_csv(UNIVERSE_CACHE_PATH)
     if str(universe["computed_month"].iloc[0]) != this_month:
         print(f"Universe cache is from {universe['computed_month'].iloc[0]}, rebuilding for {this_month}...")
-        universe = build_universe()
+        universe = build_universe(client)
     else:
         print(f"Using cached universe (computed {universe['computed_month'].iloc[0]}, "
               f"as of {universe['as_of_date'].iloc[0]}).")
 else:
     print("No universe cache found -- building for the first time...")
-    universe = build_universe()
+    universe = build_universe(client)
 
 print(f"Universe: {len(universe)} tickers (top {UNIVERSE_SIZE} by trailing "
       f"{DOLLAR_VOLUME_LOOKBACK_DAYS}-day median $ volume, as of {universe['as_of_date'].iloc[0]})")
@@ -245,10 +267,9 @@ for col in FWD_RET_COLS:
 
 # ============================================================
 # BACKFILL FORWARD RETURNS as those dates arrive
+# (client already connected above, reused here -- was previously created
+# fresh at this point before the universe rebuild also needed it)
 # ============================================================
-client = AlpacaClient(paper=True)
-client.connect()
-
 incomplete_mask = log_df[FWD_RET_COLS].isna().any(axis=1) if len(log_df) else pd.Series(dtype=bool)
 incomplete = log_df[incomplete_mask]
 print(f"\nRows with at least one pending forward-return horizon: {len(incomplete)}")

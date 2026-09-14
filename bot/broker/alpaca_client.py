@@ -192,3 +192,56 @@ class AlpacaClient:
         resp = requests.get(f"{self.base_url}/v2/clock", headers=self._headers, timeout=15)
         resp.raise_for_status()
         return resp.json()
+
+    def get_active_us_equities(self, exclude_otc=True):
+        """All active, tradable US equity assets Alpaca knows about --
+        used by ops/event_monitor.py to rebuild its monthly liquidity
+        universe from a LIVE source instead of the static, uncommitted
+        data/yf_universe.parquet snapshot (Phase 6b migration, see
+        RESEARCH_LOG.md). exclude_otc=True drops OTC/pink-sheet listings,
+        matching the implicit character of the original NASDAQ-Trader-
+        sourced universe this replaces -- not a new filter being
+        introduced, just preserving what was already true of it."""
+        resp = requests.get(f"{self.base_url}/v2/assets", headers=self._headers,
+                             params={"status": "active", "asset_class": "us_equity"}, timeout=30)
+        resp.raise_for_status()
+        assets = resp.json()
+        symbols = [
+            a["symbol"] for a in assets
+            if a.get("tradable") and (not exclude_otc or a.get("exchange") != "OTC")
+        ]
+        return symbols
+
+    def get_multi_daily_bars(self, symbols, start, end, batch_size=200):
+        """Daily OHLCV bars for MANY symbols at once, batched to stay
+        under Alpaca's per-request symbol limit. Returns {symbol: [bars]}.
+        Used for the monthly universe rebuild in ops/event_monitor.py --
+        fetching ~5,000+ candidate tickers one at a time would be slow
+        and unnecessarily rate-limit-heavy; Alpaca's multi-symbol bars
+        endpoint does this in ~25-30 requests instead of thousands."""
+        all_bars = {}
+        for i in range(0, len(symbols), batch_size):
+            batch = symbols[i:i + batch_size]
+            page_token = None
+            while True:
+                params = {
+                    "symbols": ",".join(batch),
+                    "timeframe": "1Day",
+                    "start": str(start),
+                    "end": str(end),
+                    "adjustment": "split",
+                    "limit": 10000,
+                    "feed": "iex",
+                }
+                if page_token:
+                    params["page_token"] = page_token
+                resp = requests.get(f"{DATA_BASE_URL}/v2/stocks/bars", headers=self._headers,
+                                     params=params, timeout=30)
+                resp.raise_for_status()
+                data = resp.json()
+                for sym, bars in (data.get("bars") or {}).items():
+                    all_bars.setdefault(sym, []).extend(bars)
+                page_token = data.get("next_page_token")
+                if not page_token:
+                    break
+        return all_bars

@@ -1,0 +1,40 @@
+name: Phase 6b Event Monitor (8-K liquid-name forward test, log-only)
+
+on:
+  schedule:
+    # Weekdays 16:00 UTC, matching the old Windows Task Scheduler time
+    # (18:00 Stockholm CEST). LOG ONLY -- this workflow never places
+    # an order or touches a broker account's positions.
+    - cron: "0 16 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to commit the updated log/state files back to the repo
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r ops/requirements_event_monitor.txt
+
+      - name: Run event monitor
+        env:
+          ACTIVE_BROKER: alpaca
+          APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
+          APCA_API_SECRET_KEY: ${{ secrets.APCA_API_SECRET_KEY }}
+        run: python -u ops/event_monitor.py
+
+      - name: Commit updated state/log/universe (if changed)
+        run: |
+          git config user.name "capm2-bot"
+          git config user.email "actions@github.com"
+          git add data/event_monitor_state.json data/event_monitor_universe.csv data/event_forward_log.parquet
+          git diff --cached --quiet && echo "No changes to commit" || git commit -m "Update event monitor log [automated, log-only]"
+          git push

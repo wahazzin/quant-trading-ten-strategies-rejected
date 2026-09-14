@@ -13,3 +13,8 @@ data/*
 *.log
 
 !data/ff_calendar_log.csv
+
+!data/event_monitor_state.json
+!data/event_monitor_universe.csv
+!data/event_forward_log.parquet
+!data/cik_map.csv
