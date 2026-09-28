@@ -1,0 +1,58 @@
+{
+  "experiment_id": "crypto_ai_v0_1",
+  "universe": ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "ADA-USD", "LINK-USD", "AVAX-USD", "LTC-USD"],
+  "majors": ["BTC-USD", "ETH-USD"],
+  "cadence": {"cycle_hours": 6},
+  "capital": {"initial_cash_usd": 10000.0},
+  "data": {
+    "source": "coinbase_exchange_public",
+    "hourly_candles": 336,
+    "daily_candles": 120,
+    "max_quote_age_seconds": 180
+  },
+  "costs": {
+    "fee_bps": 40.0,
+    "slippage_bps_major": 2.0,
+    "slippage_bps_alt": 6.0,
+    "impact_coeff": 0.5,
+    "sensitivity_fee_bps": [10.0, 60.0]
+  },
+  "risk": {
+    "max_weight_major": 0.35,
+    "max_weight_alt": 0.15,
+    "max_gross_exposure": 0.80,
+    "max_alt_cluster": 0.40,
+    "max_stop_pct": 18.0,
+    "min_stop_pct": 5.0,
+    "max_risk_per_position_equity_pct": 5.0,
+    "max_turnover_24h": 0.25,
+    "min_order_usd": 50.0,
+    "max_order_pct_of_24h_volume": 0.005,
+    "max_spread_bps": 50.0,
+    "daily_loss_limit_pct": 8.0,
+    "drawdown_halt_pct": 25.0,
+    "halt_lockout_days": 14
+  },
+  "llm": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "temperature": 0,
+    "max_tokens": 3000,
+    "timeout_seconds": 120,
+    "prompt_file": "prompts/trader_system_v1.md",
+    "parse_retries": 1
+  },
+  "arms": {
+    "ai_pv": {"kind": "ai", "info_menu": "price_volume", "constrained": true},
+    "btc_hold": {"kind": "buy_hold", "asset": "BTC-USD", "constrained": false},
+    "eth_hold": {"kind": "buy_hold", "asset": "ETH-USD", "constrained": false},
+    "ew_basket": {"kind": "equal_weight", "rebalance": "monthly", "constrained": false},
+    "trend_quant": {"kind": "trend", "sma_days": 50, "eval_hour_utc": 0, "band": 0.05, "constrained": true}
+  },
+  "evaluation": {
+    "ic_horizons_cycles": {"24h": 4, "72h": 12},
+    "nw_lag_days": 5,
+    "min_cycles_for_decision": 1240,
+    "decision_months": [12, 24]
+  }
+}
