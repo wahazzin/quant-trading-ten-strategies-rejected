@@ -35,7 +35,7 @@
   },
   "llm": {
     "provider": "anthropic",
-    "model": "claude-sonnet-5",
+    "model": "claude-sonnet-5-5",
     "temperature": 0,
     "max_tokens": 3000,
     "timeout_seconds": 120,
@@ -47,7 +47,7 @@
     "btc_hold": {"kind": "buy_hold", "asset": "BTC-USD", "constrained": false},
     "eth_hold": {"kind": "buy_hold", "asset": "ETH-USD", "constrained": false},
     "ew_basket": {"kind": "equal_weight", "rebalance": "monthly", "constrained": false},
-    "trend_quant": {"kind": "trend", "sma_days": 50, "eval_hour_utc": 0, "band": 0.05, "constrained": true}
+    "trend_quant": {"kind": "trend", "sma_days": 50, "band": 0.05, "constrained": true}
   },
   "evaluation": {
     "ic_horizons_cycles": {"24h": 4, "72h": 12},

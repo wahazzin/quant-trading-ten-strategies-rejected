@@ -51,7 +51,7 @@ so a null result can't be reframed later as "the AI just needs more data."
 | `btc_hold` | Reference benchmark | Buy BTC at start, hold. Not risk-constrained |
 | `eth_hold` | Reference benchmark | Same for ETH |
 | `ew_basket` | Reference benchmark | Equal-weight the 8 assets, rebalance first cycle of each UTC month |
-| `trend_quant` | Constraint-matched challenger | Hold equal-weight the assets whose daily close > 50-day SMA, evaluated at 00:00 UTC only, 5-pp rebalance band. Runs through the SAME risk engine, stops and costs as the AI |
+| `trend_quant` | Constraint-matched challenger | Hold equal-weight the assets whose daily close > 50-day SMA (target 80%/n each), evaluated every cycle (signal can only change once a day), 5-pp rebalance band. Runs through the SAME risk engine, stops and costs as the AI |
 | random policies | Constraint-matched challenger (analysis-time) | 1,000 random policies through the same risk engine and costs, calibrated ONLY on the AI's realised gross exposure and turnover, never on returns. Implemented in v0.2, before the first interim report |
 
 The constraint-matched arms separate "the AI decides well" from "the risk engine helps."
