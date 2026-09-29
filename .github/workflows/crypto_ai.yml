@@ -2,7 +2,7 @@ name: crypto_ai paper trader (v0.1)
 
 # STATUS: manual-trigger only. The 6-hourly schedule is deliberately NOT enabled until:
 #   1. the owner confirms the flagged (⚑) items in crypto_ai/PREREGISTRATION.md
-#   2. the ANTHROPIC_API_KEY repo secret exists
+#   2. the GROQ_API_KEY repo secret exists (free, no card; OPENROUTER_API_KEY optional backup)
 #   3. the lock has been created (run this workflow with action = lock)
 # Then uncomment the `schedule:` block below. Enabling it earlier would fail every run with
 # LOCK_MISMATCH by design.
@@ -61,7 +61,8 @@ jobs:
       - name: Execute
         working-directory: code
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           PYTHONIOENCODING: utf-8
         run: |

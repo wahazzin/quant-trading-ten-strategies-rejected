@@ -40,7 +40,7 @@ so a null result can't be reframed later as "the AI just needs more data."
 | Instrument | Spot, long-only, no leverage, no shorting, USD cash only, market orders only |
 | Costs ⚑ | 40 bps fee/side + measured half-spread + slippage (2 bps BTC/ETH, 6 bps alts + size impact). Sensitivity re-runs at 10 and 60 bps |
 | Fills | Priced from a quote fetched AFTER the LLM response returns — never at the price the AI saw |
-| Model | Pinned in `experiment.json`, exact model id returned by the API logged on every call |
+| Model | `gpt-oss-120b`, open weights, via free API tiers (Groq primary, OpenRouter backup serving the SAME weights). Never falls back to a different model. Provider + returned model id logged on every call |
 | Randomness | temperature 0; prompt and full response logged |
 
 **Arms (all run every cycle on the identical snapshot):**
@@ -137,7 +137,9 @@ Final labels: `NOT EVALUABLE` · `NO EVIDENCE` · `HARMFUL` · `PREDICTIVE, NOT 
 | Risk | Control |
 |---|---|
 | LLM has seen historical prices in training → backtest is contaminated | **No historical backtest of the AI arm. Forward-only.** Baselines may be backtested. |
-| Model silently updated mid-experiment | Model pinned; API-returned model id logged every call; a change = amendment + new arm |
+| Model silently updated mid-experiment | Open-weights model (fixed weights file); provider and API-returned model id logged every call |
+| Free tier shrinks or disappears mid-experiment | Same weights served by a second provider. Each missed cycle counts against the 85%-coverage rule; if coverage becomes impossible, the arm is closed via amendment, never swapped to a different model |
+| Different providers behave slightly differently (quantisation, serving stack) | Provider logged per call; IC reported split by provider as a diagnostic |
 | Prompt tweaked after a bad week | Prompt file hashed into the lock |
 | Perfect fills at the price the AI saw | Fills use a post-response quote, plus fee, spread, slippage |
 | Look-ahead via in-progress candle | Closed candles only; test enforces it |

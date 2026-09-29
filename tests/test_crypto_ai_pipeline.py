@@ -199,5 +199,58 @@ class TestEndToEnd(unittest.TestCase):
         self.assertTrue(all("status" in d and "codes" in d for d in rows[0]["risk_decisions"]))
 
 
+class TestFreeProvider(unittest.TestCase):
+    """The free OpenAI-compatible provider: falls back between endpoints serving the SAME model,
+    never to a different one, and fails loudly when nothing is configured."""
+
+    class Resp:
+        def __init__(self, code, body):
+            self.status_code, self._b, self.text = code, body, json.dumps(body)
+
+        def json(self):
+            return self._b
+
+    def setUp(self):
+        from crypto_ai.agents import llm as L
+        self.L = L
+        self._post, self._sleep = L.requests.post, L.time.sleep
+        L.time.sleep = lambda s: None
+        self._env = {k: os.environ.pop(k, None) for k in ("GROQ_API_KEY", "OPENROUTER_API_KEY")}
+
+    def tearDown(self):
+        self.L.requests.post, self.L.time.sleep = self._post, self._sleep
+        for k, v in self._env.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+
+    def test_no_keys_fails_loudly(self):
+        with self.assertRaises(self.L.LLMError):
+            self.L.make_llm(CFG)
+
+    def test_falls_back_to_same_weights_on_second_provider(self):
+        os.environ["GROQ_API_KEY"], os.environ["OPENROUTER_API_KEY"] = "g", "o"
+        calls = []
+
+        def post(url, headers, json, timeout):
+            calls.append(json["model"])
+            if "groq" in url:
+                return self.Resp(429, {"error": "rate limited"})
+            return self.Resp(200, {"model": json["model"], "choices": [{"message": {"content": "{}"},
+                                   "finish_reason": "stop"}], "usage": {"prompt_tokens": 5, "completion_tokens": 2}})
+
+        self.L.requests.post = post
+        out = self.L.make_llm(CFG).complete("s", "u")
+        self.assertEqual(out["provider"], "openrouter")
+        self.assertEqual(len(out["endpoint_errors"]), 2)
+        self.assertTrue(all("gpt-oss-120b" in m for m in calls))     # same weights every call
+
+    def test_all_endpoints_down_raises(self):
+        os.environ["GROQ_API_KEY"] = "g"
+        self.L.requests.post = lambda url, headers, json, timeout: self.Resp(503, {})
+        with self.assertRaises(self.L.LLMError):
+            self.L.make_llm(CFG).complete("s", "u")
+
+
 if __name__ == "__main__":
     unittest.main()

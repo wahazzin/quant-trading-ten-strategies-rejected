@@ -101,6 +101,7 @@ def decide(llm, cfg, cycle_id, snapshot, pf, theses, feedback, now):
         resp = llm.complete(system, user, ctx)
         parsed, errors = validate(resp["text"], cfg, cycle_id)
         attempts.append({"raw": resp["text"], "errors": errors, "model_id": resp.get("model_id"),
+                         "provider": resp.get("provider"), "endpoint_errors": resp.get("endpoint_errors"),
                          "stop_reason": resp.get("stop_reason"), "tokens_in": resp.get("tokens_in"),
                          "tokens_out": resp.get("tokens_out"), "latency_s": resp.get("latency_s")})
         if parsed is not None:
