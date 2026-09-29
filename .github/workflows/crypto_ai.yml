@@ -1,0 +1,83 @@
+name: crypto_ai paper trader (v0.1)
+
+# STATUS: manual-trigger only. The 6-hourly schedule is deliberately NOT enabled until:
+#   1. the owner confirms the flagged (⚑) items in crypto_ai/PREREGISTRATION.md
+#   2. the ANTHROPIC_API_KEY repo secret exists
+#   3. the lock has been created (run this workflow with action = lock)
+# Then uncomment the `schedule:` block below. Enabling it earlier would fail every run with
+# LOCK_MISMATCH by design.
+#
+# State (journal, portfolios, theses, lock) lives on the separate `crypto-ai-data` branch so
+# main's history stays clean and your own pushes never conflict with the bot's commits.
+
+on:
+  # schedule:
+  #   - cron: "7 0,6,12,18 * * *"     # 7 min past each 6h slot (UTC); runner floors to the slot
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "run = one cycle | lock = start the experiment clock (ONCE) | report = print report"
+        required: true
+        default: "run"
+        type: choice
+        options: [run, lock, report]
+
+concurrency:
+  group: crypto-ai-state          # never two runs writing state at once
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code (main)
+        uses: actions/checkout@v4
+        with:
+          path: code
+
+      - name: Checkout or create state branch
+        run: |
+          set -e
+          url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$url" crypto-ai-data >/dev/null 2>&1; then
+            git clone --depth 1 --branch crypto-ai-data "$url" state
+          else
+            mkdir state && cd state && git init -q && git checkout -q -b crypto-ai-data
+            git remote add origin "$url"
+            echo "# crypto_ai experiment state (written by GitHub Actions, do not edit by hand)" > README.md
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests numpy pandas
+
+      - name: Execute
+        working-directory: code
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PYTHONIOENCODING: utf-8
+        run: |
+          case "${{ github.event.inputs.action || 'run' }}" in
+            lock)   python -m crypto_ai.lock --create --state-dir ../state ;;
+            report) python -m crypto_ai.analytics.report --state-dir ../state ;;
+            *)      python -m crypto_ai.runner --state-dir ../state ;;
+          esac
+
+      - name: Commit state
+        if: always()
+        working-directory: state
+        run: |
+          git config user.name "crypto-ai-bot"
+          git config user.email "actions@github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "no state changes"; exit 0; fi
+          git commit -q -m "crypto_ai state: ${{ github.event.inputs.action || 'run' }} $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q origin crypto-ai-data
