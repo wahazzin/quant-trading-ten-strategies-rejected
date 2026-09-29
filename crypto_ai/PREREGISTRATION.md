@@ -56,6 +56,15 @@ so a null result can't be reframed later as "the AI just needs more data."
 
 The constraint-matched arms separate "the AI decides well" from "the risk engine helps."
 
+**Known structural asymmetry (found by unit test, recorded before any trade):** the risk engine
+caps turnover at 25% of equity per 24h and gross exposure at 80%. The AI and `trend_quant`
+therefore need ~4 days to build a full position and never exceed 80% invested, while
+`btc_hold`/`eth_hold`/`ew_basket` are 100% invested from cycle one. In a rising market the
+reference benchmarks get a structural head start unrelated to decision quality; in a falling one
+they get a structural penalty. This is exactly why the primary test is IC (unaffected by
+constraints) and why the economic comparison that matters is AI vs `trend_quant` and the random
+policies, which face identical constraints.
+
 ## 4. Explicitly NOT tested in v0.1
 
 News, social sentiment, on-chain data, a "full information" arm, ablation arms, memecoins,
