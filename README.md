@@ -8,6 +8,8 @@ apparatus that proved fifteen strategies weren't — including two that passed e
 robustness check before a sealed holdout killed them. That negative result, and the
 discipline that produced it, is the point.
 
+**Related:** the crypto AI paper-trading experiment lives in its own repo: [`wahazzin/crypto-ai-trader`](https://github.com/wahazzin/crypto-ai-trader).
+
 **Start here:** **[`WINS.md`](WINS.md)** — what this program actually caught, in plain
 terms with the numbers: two strategies that fooled every practice-window check and
 died in holdout, the mechanistic reason a COVID-speed crash breaks trailing-volatility
