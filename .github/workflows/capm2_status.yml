@@ -34,7 +34,7 @@ jobs:
       - run: pip install requests
       - name: Message
         if: github.event.inputs.action == 'message'
-        run: python -c "import os,requests; u=os.environ.get('DISCORD_WEBHOOK_URL'); u and requests.post(u, json={'content': os.environ['TEXT'][:1900]}, timeout=15)"
+        run: python ops/capm2_status.py message
       - name: Snapshot
         if: github.event.inputs.action != 'message'
         env:

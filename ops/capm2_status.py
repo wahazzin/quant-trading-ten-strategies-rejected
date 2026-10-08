@@ -82,7 +82,18 @@ def markdown(s):
     return "\n".join(L) + "\n"
 
 
+def message(text):
+    """Post a plain text to this repo's Discord channel (weekly review). Not a broker call."""
+    url = os.environ.get("DISCORD_WEBHOOK_URL")
+    if url:
+        requests.post(url, json={"content": text[:1900]}, timeout=15)   # Discord webhook only
+
+
 if __name__ == "__main__":
+    import sys
+    if sys.argv[1:] == ["message"]:
+        message(os.environ.get("TEXT", ""))
+        raise SystemExit(0)
     s = snapshot()
     os.makedirs("status", exist_ok=True)
     json.dump(s, open("status/capm2_status.json", "w"), indent=1)
