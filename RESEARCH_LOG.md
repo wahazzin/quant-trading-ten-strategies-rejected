@@ -750,3 +750,9 @@ Costs 0.0045% per side (CAPM2's own Alpaca cost model). Read-only: no orders, no
 total return beats real CAPM2's over the identical window **and** its max drawdown is smaller. Anything else =
 NO EVIDENCE, CAPM2 unchanged. Re-checked at CAPM2's own 12-month mark. Interim readings are informational only.
 Never backfilled over past data (the OTLY drop is already known = hindsight).
+
+**Schedule fix (2026-10-08): weekly rebalance moved to 15:00 UTC Mon (Tue if Monday is a US market holiday).**
+The old fixed 14:00 UTC cron would have fired 30 min before the NYSE open after the US clock change
+(2026-11-01), sizing on stale prices with orders filling later at the open; Monday market holidays would also
+have sent orders on a closed day. New read-only gate `ops/capm2_should_run.py` (clock + calendar, unit-tested).
+Same weekly rule, same strategy; only the execution time is now always inside market hours.

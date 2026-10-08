@@ -2,12 +2,11 @@ name: CAPM2 Weekly Rebalance
 
 on:
   schedule:
-    # Monday 16:00 CEST (Stockholm summer time) = 14:00 UTC.
-    # Note: this is a FIXED UTC time, so it will drift to 15:00 local
-    # during Swedish winter time (CET, UTC+1) -- cron has no timezone
-    # concept. Adjust the "14" below by 1 hour around late Oct/late Mar
-    # if exact local time matters to you.
-    - cron: "0 14 * * 1"
+    # 15:00 UTC Monday AND Tuesday (changed 2026-10-08). 15:00 UTC is inside US market hours all year
+    # (11:00 New York in summer time, 10:00 in winter time); the old 14:00 UTC would have run 30 min BEFORE
+    # the open after the US clock change on 2026-11-01. ops/capm2_should_run.py lets only one run per week
+    # through: Monday, or Tuesday when Monday was a market holiday.
+    - cron: "0 15 * * 1,2"
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab too
 
 jobs:
@@ -23,7 +22,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r ops/requirements_capm2.txt
 
+      - name: Market-open gate (read-only)
+        id: gate
+        env:
+          CAPM2_US_KEY_ID: ${{ secrets.CAPM2_US_KEY_ID }}
+          CAPM2_US_SECRET_KEY: ${{ secrets.CAPM2_US_SECRET_KEY }}
+          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+        run: |
+          python -m unittest tests.test_should_run -q
+          d=$(python ops/capm2_should_run.py); echo "$d"
+          case "$d" in RUN*) echo "go=1" >> $GITHUB_OUTPUT ;; *) echo "go=0" >> $GITHUB_OUTPUT ;; esac
+
       - name: Run weekly reallocation
+        if: steps.gate.outputs.go == '1'
         env:
           ACTIVE_BROKER: alpaca
           CAPM2_US_KEY_ID: ${{ secrets.CAPM2_US_KEY_ID }}
