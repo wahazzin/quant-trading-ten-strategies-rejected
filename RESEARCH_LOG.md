@@ -730,3 +730,23 @@ in alphabetical symbol order, so a buy could fill before the sale meant to fund 
 account briefly used margin. Fix changes only the submission order; target positions, weights and the
 pre-registered allocation are untouched (unit test added). The small residual negative cash after all fills
 is market-order slippage on a fully invested account (~0.09% of equity), noted, not a strategy issue.
+
+---
+
+## Test 21 — CAPM2 + 15% trailing stop (SHADOW) — PRE-REGISTERED 2026-10-08, before it ran
+
+**Origin:** Yassin, after CAPM2's SE account fell −13.6% in a month with ~40% in OTLY. The 3-month signal still
+ranked OTLY a "winner" (its late-July spike is inside the window) while it slid for weeks. Real weakness of a
+slow lookback; but "it would have lost less" is hindsight, and stops also cause whipsaw (sell a dip, miss the
+bounce). Related prior: Test 15 (dynamic exposure) died in holdout. **Prior: low-to-medium.**
+
+**Rule (one rule only, fixed):** a shadow copy of CAPM2, re-copying CAPM2's real weights every Monday after its
+rebalance. Each trading day after the close: for each held name, peak = highest daily close since the shadow
+bought it; if close ≤ 85% of peak, sell at that close, hold cash until the next Monday re-copy.
+Costs 0.0045% per side (CAPM2's own Alpaca cost model). Read-only: no orders, no extra account
+(`ops/capm2_shadow_stop.py`, state on branch `capm-status`). Starts from an exact copy of the real accounts.
+
+**Verdict (binding):** at **2027-04-08** (6 months), combined US+SE: the stop version **adopted only if** its
+total return beats real CAPM2's over the identical window **and** its max drawdown is smaller. Anything else =
+NO EVIDENCE, CAPM2 unchanged. Re-checked at CAPM2's own 12-month mark. Interim readings are informational only.
+Never backfilled over past data (the OTLY drop is already known = hindsight).

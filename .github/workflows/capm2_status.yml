@@ -6,7 +6,8 @@ name: CAPM2 status snapshot (read-only) + review messages
 
 on:
   schedule:
-    - cron: "20 6 * * 1"
+    - cron: "20 6 * * 1"        # Monday snapshot before the weekly review
+    - cron: "35 21 * * 1-5"     # after the US close: Test 21 shadow (daily stop check)
   workflow_dispatch:
     inputs:
       action:
@@ -43,9 +44,13 @@ jobs:
           CAPM2_SE_KEY_ID: ${{ secrets.CAPM2_SE_KEY_ID }}
           CAPM2_SE_SECRET_KEY: ${{ secrets.CAPM2_SE_SECRET_KEY }}
         run: |
-          python -m unittest tests.test_capm2_status -q
-          python ops/capm2_status.py
+          python -m unittest tests.test_capm2_status tests.test_shadow_stop -q
           url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          mkdir out && cp -r status out/ && cd out && git init -q && git checkout -q -b capm-status
+          git clone -q --depth 1 --branch capm-status "$url" out 2>/dev/null || { mkdir out && git -C out init -q && git -C out checkout -q -b capm-status; }
+          mkdir -p out/status && cp -r out/status/. status/ 2>/dev/null || true
+          python ops/capm2_status.py
+          python ops/capm2_shadow_stop.py
+          cp -r status/. out/status/ && cd out
           git config user.name "capm-status-bot" && git config user.email "actions@github.com"
-          git add -A && git commit -q -m "CAPM2 status $(date -u +%Y-%m-%dT%H:%MZ)" && git push -q -f "$url" capm-status
+          git add -A && git commit -q -m "CAPM2 status $(date -u +%Y-%m-%dT%H:%MZ)" || exit 0
+          git push -q "$url" HEAD:capm-status
