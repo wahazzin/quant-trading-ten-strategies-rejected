@@ -723,3 +723,10 @@ Script: `ops/ff_calendar_monitor.py` (daily, log-only). Log:
 `data/ff_calendar_log.csv`. No secrets or broker credentials required --
 this reads a public webpage only.
 
+
+**Execution bug fixed (2026-10-08): orders now go SELLS FIRST, then buys.** Found via the new read-only CAPM2
+status snapshot: the SE account showed −$75 cash. Cause: `bot/broker/reconcile.execute_plan` submitted orders
+in alphabetical symbol order, so a buy could fill before the sale meant to fund it and a fully invested
+account briefly used margin. Fix changes only the submission order; target positions, weights and the
+pre-registered allocation are untouched (unit test added). The small residual negative cash after all fills
+is market-order slippage on a fully invested account (~0.09% of equity), noted, not a strategy issue.

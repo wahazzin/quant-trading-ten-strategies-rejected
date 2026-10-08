@@ -125,3 +125,13 @@ class TestCheckTradeSafety(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSellsBeforeBuys(unittest.TestCase):
+    def test_execute_plan_submits_all_sells_before_any_buy(self):
+        from bot.broker.reconcile import execute_plan
+        sent = []
+        execute_plan({"ALV": 10, "OTLY": -500, "SPOT": 3, "ABB": -2}, lambda s, a, q: sent.append((s, a)) or {"status": "filled"})
+        actions = [a for _, a in sent]
+        self.assertEqual(actions, ["SELL", "SELL", "BUY", "BUY"])
+        self.assertEqual([s for s, _ in sent], ["ABB", "OTLY", "ALV", "SPOT"])

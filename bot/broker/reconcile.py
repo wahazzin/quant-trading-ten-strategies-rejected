@@ -210,7 +210,10 @@ def execute_plan(diffs, place_order_fn, dry_run=False):
         return [(sym, "BUY" if qty > 0 else "SELL", abs(qty), None) for sym, qty in sorted(diffs.items())]
 
     results = []
-    for sym in sorted(diffs):
+    # SELLS FIRST, then buys (fixed 2026-10-08): alphabetical order let a buy go out before the sale that
+    # funds it, so a fully invested account briefly went to negative cash (margin) -- seen on the CAPM2 SE
+    # account. Same target positions, only the submission order changes.
+    for sym in sorted(diffs, key=lambda s: (diffs[s] > 0, s)):
         qty = diffs[sym]
         action = "BUY" if qty > 0 else "SELL"
         result = place_order_fn(sym, action, abs(qty))
