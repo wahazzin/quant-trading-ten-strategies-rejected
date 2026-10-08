@@ -4,7 +4,7 @@ one extra rule -- a 15% trailing stop per holding. READ-ONLY on the broker (GET 
 
 Rule (fixed): each trading day after the close, for every name the shadow holds: peak = highest daily close since
 the shadow bought it; if today's close <= 85% of that peak, the shadow sells it at today's close and holds the cash
-until the next weekly rebalance. Every Monday (after CAPM2's real rebalance) the shadow re-copies CAPM2's real
+until the next weekly rebalance. On the first trading day of each week (after CAPM2's real rebalance) it re-copies CAPM2's real
 weights with its own equity. Costs: 0.0045% per side (Alpaca ~0.009% round trip, as CAPM2's own cost model).
 State: status/shadow_stop.json (capm-status branch). Report: status/shadow_stop.md
 """
@@ -77,8 +77,10 @@ def run(today=None):
             continue
         for day in days:
             eq = g["cash"] + sum(v["shares"] * prices.get(s, {}).get(day, v["peak"]) for s, v in g["holdings"].items())
-            is_monday = date.fromisoformat(day).weekday() == 0
-            if is_monday and day == days[-1] and g["last_sync"] != day:
+            # weekly re-copy on the first trading day of each week (Monday, or Tuesday after a holiday Monday,
+            # matching when CAPM2 actually rebalances); only on the latest day, after the real rebalance ran
+            new_week = date.fromisoformat(day).isocalendar()[:2] != date.fromisoformat(g["last_sync"]).isocalendar()[:2]
+            if new_week and day == days[-1]:
                 mirror(g, pos, real_eq, eq, day, prices)           # weekly: copy CAPM2's new weights
                 g["last_sync"] = day
                 st["log"].append({"day": day, "group": gname, "event": "WEEKLY_SYNC", "equity": eq})
