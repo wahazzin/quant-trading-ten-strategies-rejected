@@ -1,0 +1,51 @@
+name: CAPM2 status snapshot (read-only) + review messages
+
+# Monday 06:20 UTC, before the automatic weekly review (06:53 UTC): saves a READ-ONLY snapshot of the CAPM2
+# paper accounts to the `capm-status` branch (no orders, ever). action=message posts a text to this repo's
+# Discord channel (used by the weekly review).
+
+on:
+  schedule:
+    - cron: "20 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [snapshot, message]
+        default: snapshot
+      text:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      TEXT: ${{ github.event.inputs.text }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Message
+        if: github.event.inputs.action == 'message'
+        run: python -c "import os,requests; u=os.environ.get('DISCORD_WEBHOOK_URL'); u and requests.post(u, json={'content': os.environ['TEXT'][:1900]}, timeout=15)"
+      - name: Snapshot
+        if: github.event.inputs.action != 'message'
+        env:
+          CAPM2_US_KEY_ID: ${{ secrets.CAPM2_US_KEY_ID }}
+          CAPM2_US_SECRET_KEY: ${{ secrets.CAPM2_US_SECRET_KEY }}
+          CAPM2_SE_KEY_ID: ${{ secrets.CAPM2_SE_KEY_ID }}
+          CAPM2_SE_SECRET_KEY: ${{ secrets.CAPM2_SE_SECRET_KEY }}
+        run: |
+          python -m unittest tests.test_capm2_status -q
+          python ops/capm2_status.py
+          url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          mkdir out && cp -r status out/ && cd out && git init -q && git checkout -q -b capm-status
+          git config user.name "capm-status-bot" && git config user.email "actions@github.com"
+          git add -A && git commit -q -m "CAPM2 status $(date -u +%Y-%m-%dT%H:%MZ)" && git push -q -f "$url" capm-status
