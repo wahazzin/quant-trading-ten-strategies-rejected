@@ -1,29 +1,25 @@
 {
- "generated_utc": "2026-10-08 10:27",
+ "generated_utc": "2026-10-09 01:23",
  "accounts": {
   "US": {
-   "equity": 102247.51,
+   "equity": 102039.92,
    "last_equity": 101961.74,
    "cash": 20505.92,
    "positions": [
     {
      "symbol": "NVDA",
      "qty": 171.0,
-     "market_value": 40258.188,
-     "unrealized_plpc": 0.04041
+     "market_value": 39557.43,
+     "unrealized_plpc": 0.0223
     },
     {
      "symbol": "XOM",
      "qty": 249.0,
-     "market_value": 41483.4,
-     "unrealized_plpc": 0.02157
+     "market_value": 41976.5694,
+     "unrealized_plpc": 0.03371
     }
    ],
    "equity_history": [
-    [
-     1783468800,
-     99487.07
-    ],
     [
      1783555200,
      99487.07
@@ -287,34 +283,30 @@
    ]
   },
   "SE": {
-   "equity": 86247.11,
+   "equity": 87650.28,
    "last_equity": 86652.35,
    "cash": -75.06,
    "positions": [
     {
      "symbol": "ALV",
      "qty": 152.0,
-     "market_value": 16454.0,
-     "unrealized_plpc": -0.05312
+     "market_value": 16876.56,
+     "unrealized_plpc": -0.0288
     },
     {
      "symbol": "OTLY",
      "qty": 3281.0,
-     "market_value": 34023.97,
-     "unrealized_plpc": -0.21976
+     "market_value": 34056.78,
+     "unrealized_plpc": -0.21901
     },
     {
      "symbol": "SPOT",
      "qty": 70.0,
-     "market_value": 35844.2,
-     "unrealized_plpc": -0.07756
+     "market_value": 36792.0,
+     "unrealized_plpc": -0.05317
     }
    ],
    "equity_history": [
-    [
-     1783468800,
-     100000.0
-    ],
     [
      1783555200,
      100000.0
@@ -846,6 +838,10 @@
   [
    "2026-10-07",
    777.15
+  ],
+  [
+   "2026-10-08",
+   773.88
   ]
  ]
 }
