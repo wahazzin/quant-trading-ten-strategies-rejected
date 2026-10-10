@@ -1,29 +1,25 @@
 {
- "generated_utc": "2026-10-09 01:23",
+ "generated_utc": "2026-10-10 01:11",
  "accounts": {
   "US": {
-   "equity": 102039.92,
-   "last_equity": 101961.74,
+   "equity": 101749.36,
+   "last_equity": 101874.5,
    "cash": 20505.92,
    "positions": [
     {
      "symbol": "NVDA",
      "qty": 171.0,
-     "market_value": 39557.43,
-     "unrealized_plpc": 0.0223
+     "market_value": 39215.43,
+     "unrealized_plpc": 0.01346
     },
     {
      "symbol": "XOM",
      "qty": 249.0,
-     "market_value": 41976.5694,
-     "unrealized_plpc": 0.03371
+     "market_value": 42028.0128,
+     "unrealized_plpc": 0.03498
     }
    ],
    "equity_history": [
-    [
-     1783555200,
-     99487.07
-    ],
     [
      1783641600,
      99487.07
@@ -279,38 +275,38 @@
     [
      1791417600,
      101961.74
+    ],
+    [
+     1791504000,
+     101874.5
     ]
    ]
   },
   "SE": {
-   "equity": 87650.28,
-   "last_equity": 86652.35,
+   "equity": 88394.05,
+   "last_equity": 87707.68,
    "cash": -75.06,
    "positions": [
     {
      "symbol": "ALV",
      "qty": 152.0,
-     "market_value": 16876.56,
-     "unrealized_plpc": -0.0288
+     "market_value": 16683.52,
+     "unrealized_plpc": -0.03991
     },
     {
      "symbol": "OTLY",
      "qty": 3281.0,
-     "market_value": 34056.78,
-     "unrealized_plpc": -0.21901
+     "market_value": 34745.79,
+     "unrealized_plpc": -0.20321
     },
     {
      "symbol": "SPOT",
      "qty": 70.0,
-     "market_value": 36792.0,
-     "unrealized_plpc": -0.05317
+     "market_value": 37039.8,
+     "unrealized_plpc": -0.04679
     }
    ],
    "equity_history": [
-    [
-     1783555200,
-     100000.0
-    ],
     [
      1783641600,
      100000.0
@@ -566,15 +562,15 @@
     [
      1791417600,
      86652.35
+    ],
+    [
+     1791504000,
+     87707.68
     ]
    ]
   }
  },
  "spy": [
-  [
-   "2026-07-06",
-   751.27
-  ],
   [
    "2026-07-07",
    747.77
@@ -842,6 +838,10 @@
   [
    "2026-10-08",
    773.88
+  ],
+  [
+   "2026-10-09",
+   778.51
   ]
  ]
 }
