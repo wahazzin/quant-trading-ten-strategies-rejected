@@ -2,15 +2,15 @@
  "start": "2026-10-08",
  "groups": {
   "US": {
-   "cash": 20502.243628539993,
+   "cash": 20502.255026749997,
    "holdings": {
     "NVDA": {
-     "shares": 169.57956192080877,
+     "shares": 171.0,
      "peak": 237.4,
      "entry": 237.4
     },
     "XOM": {
-     "shares": 252.87046632124353,
+     "shares": 249.0,
      "peak": 169.015,
      "entry": 164.05
     }
@@ -25,31 +25,31 @@
     },
     {
      "day": "2026-10-08",
-     "shadow": 102223.52031906648,
+     "shadow": 102036.25502675,
      "real": 102039.92
     },
     {
      "day": "2026-10-09",
-     "shadow": 102134.21802036246,
+     "shadow": 101745.69502675,
      "real": 101749.36
     }
    ]
   },
   "SE": {
-   "cash": -78.94449764999767,
+   "cash": -78.964368975,
    "holdings": {
     "ALV": {
-     "shares": 149.02635630830542,
+     "shares": 152.0,
      "peak": 111.005,
      "entry": 110.41
     },
     "OTLY": {
-     "shares": 3276.2609532980264,
+     "shares": 3281.0,
      "peak": 10.6,
      "entry": 10.385
     },
     "SPOT": {
-     "shares": 69.87514011404063,
+     "shares": 70.0,
      "peak": 529.23,
      "entry": 512.975
     }
@@ -64,12 +64,12 @@
     },
     {
      "day": "2026-10-08",
-     "shadow": 87279.44243746014,
+     "shadow": 87646.375631025,
      "real": 87650.28
     },
     {
      "day": "2026-10-09",
-     "shadow": 87995.51645964092,
+     "shadow": 88390.145631025,
      "real": 88394.05
     }
    ]
@@ -87,6 +87,35 @@
    "group": "SE",
    "event": "START",
    "equity": 86247.11
+  },
+  {
+   "day": "2026-10-12",
+   "group": "US",
+   "event": "CORRECTION",
+   "note": "start copy fixed to the real share counts/cash (mirror bug: shares were priced at the last close vs live price at a pre-market start). No stop had fired, so shadow == real for 2026-10-07..09 (minus the copy fee). Values before correction kept here.",
+   "before": {
+    "cash": 20502.243628539993,
+    "shares": {
+     "NVDA": 169.57956192080877,
+     "XOM": 252.87046632124353
+    },
+    "last_shadow": 102134.21802036246
+   }
+  },
+  {
+   "day": "2026-10-12",
+   "group": "SE",
+   "event": "CORRECTION",
+   "note": "start copy fixed to the real share counts/cash (mirror bug: shares were priced at the last close vs live price at a pre-market start). No stop had fired, so shadow == real for 2026-10-07..09 (minus the copy fee). Values before correction kept here.",
+   "before": {
+    "cash": -78.94449764999767,
+    "shares": {
+     "ALV": 149.02635630830542,
+     "OTLY": 3276.2609532980264,
+     "SPOT": 69.87514011404063
+    },
+    "last_shadow": 87995.51645964092
+   }
   }
  ]
 }
