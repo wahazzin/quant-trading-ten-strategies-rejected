@@ -756,3 +756,23 @@ The old fixed 14:00 UTC cron would have fired 30 min before the NYSE open after 
 (2026-11-01), sizing on stale prices with orders filling later at the open; Monday market holidays would also
 have sent orders on a closed day. New read-only gate `ops/capm2_should_run.py` (clock + calendar, unit-tested).
 Same weekly rule, same strategy; only the execution time is now always inside market hours.
+
+**Fix (2026-10-12, weekly review): late GitHub schedules could silently skip a whole week's rebalance.**
+GitHub starts scheduled jobs late, sometimes by hours: the 2026-10-05 rebalance (cron 14:00 UTC) started at
+21:19 UTC, after the close; all 5 orders sat "accepted" and filled at the next open. With the 2026-10-08 gate
+the same delay would have printed SKIP (market closed) on Monday, and Tuesday skipped too (Monday was a trading
+day) -> no rebalance that week, with no alert. Now: a second slot at 17:30 UTC Mon/Tue, and the gate lets a run
+through when the market is open AND no run this ISO week has reached the rebalance step yet (read from this
+workflow's own run history, GET only). A run that reached the step and failed is NOT retried automatically
+(no doubled orders); if the history can't be read, Tuesday falls back to the old holiday-only rule and the second
+Monday slot skips. Runs serialized with a concurrency group. Order code untouched; same weekly rule and weights.
+Tests: tests/test_should_run.py.
+
+**Fix (2026-10-12, weekly review): Test 21 shadow was not an exact copy at the start.** `mirror()` turned
+CAPM2's weights (market value at the broker's live price) into shares using the last daily close. The start ran
+pre-market (2026-10-08 10:27 UTC), when those prices differed, so the shadow held e.g. NVDA 169.58 / XOM 252.87
+shares vs the real 171 / 249 -- and by 2026-10-09 shadow and real had drifted apart (US +0.38pp, SE -0.40pp)
+although no stop had fired. `mirror()` now copies the real share counts and cash, scaled to the shadow's equity.
+State on `capm-status` corrected: no stop had fired, so shadow == real for 2026-10-07..09 (minus the copy fee);
+the pre-correction values are kept in the state log (event CORRECTION). The rule, start date and verdict date
+(2027-04-08) are unchanged. Tests: tests/test_shadow_stop.py.

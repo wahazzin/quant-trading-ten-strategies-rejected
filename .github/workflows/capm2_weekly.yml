@@ -7,7 +7,19 @@ on:
     # the open after the US clock change on 2026-11-01. ops/capm2_should_run.py lets only one run per week
     # through: Monday, or Tuesday when Monday was a market holiday.
     - cron: "0 15 * * 1,2"
+    # Second slot (added 2026-10-12): GitHub often starts scheduled jobs hours late (2026-10-05: 7h20m late,
+    # after the close). The gate lets a run through only if no run has rebalanced yet this week, so extra
+    # slots are harmless and a late/missed Monday is caught up the same day or on Tuesday.
+    - cron: "30 17 * * 1,2"
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab too
+
+permissions:
+  contents: read
+  actions: read          # the gate reads this workflow's own run history (GET only)
+
+concurrency:
+  group: capm2-weekly
+  cancel-in-progress: false
 
 jobs:
   rebalance:
@@ -28,6 +40,7 @@ jobs:
           CAPM2_US_KEY_ID: ${{ secrets.CAPM2_US_KEY_ID }}
           CAPM2_US_SECRET_KEY: ${{ secrets.CAPM2_US_SECRET_KEY }}
           FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python -m unittest tests.test_should_run -q
           d=$(python ops/capm2_should_run.py); echo "$d"

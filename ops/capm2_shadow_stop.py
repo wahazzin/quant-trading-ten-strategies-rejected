@@ -5,7 +5,7 @@ one extra rule -- a 15% trailing stop per holding. READ-ONLY on the broker (GET 
 Rule (fixed): each trading day after the close, for every name the shadow holds: peak = highest daily close since
 the shadow bought it; if today's close <= 85% of that peak, the shadow sells it at today's close and holds the cash
 until the next weekly rebalance. On the first trading day of each week (after CAPM2's real rebalance) it re-copies CAPM2's real
-weights with its own equity. Costs: 0.0045% per side (Alpaca ~0.009% round trip, as CAPM2's own cost model).
+holdings (share counts + cash, scaled to its own equity). Costs: 0.0045% per side (Alpaca ~0.009% round trip, as CAPM2's own cost model).
 State: status/shadow_stop.json (capm-status branch). Report: status/shadow_stop.md
 """
 import json
@@ -35,21 +35,27 @@ def closes(h, symbols, start):
     return out
 
 
-def mirror(g, real_positions, real_equity, equity, px_day, prices):
-    """Re-copy CAPM2's real weights with the shadow's own equity (fees charged on the turnover)."""
+def mirror(g, real_positions, real_cash, real_equity, equity, px_day, prices):
+    """Re-copy CAPM2's real account with the shadow's own equity: the real share counts and cash, scaled by
+    equity / real_equity (fees charged on the turnover).
+    Fixed 2026-10-12: it used to derive shares from weights (market_value / equity, at the broker's live price)
+    divided by the last daily close -- when those two prices differ (the 2026-10-08 start ran pre-market at
+    10:27 UTC), the 'copy' held different share counts than the real account, so shadow and real drifted apart
+    with no stop involved (US +0.18%, SE -0.43% after two days)."""
+    scale = equity / real_equity
     old = {s: v["shares"] * prices.get(s, {}).get(px_day, v["entry"]) for s, v in g["holdings"].items()}
     new_h, cost = {}, 0.0
     for p in real_positions:
-        s, w = p["symbol"], float(p["market_value"]) / real_equity
+        s = p["symbol"]
         px = prices.get(s, {}).get(px_day) or float(p["current_price"])
-        val = equity * w
-        cost += abs(val - old.get(s, 0.0)) * FEE
-        new_h[s] = {"shares": val / px, "peak": px, "entry": px}
+        qty = float(p["qty"]) if p.get("qty") is not None else float(p["market_value"]) / float(p["current_price"])
+        shares = qty * scale
+        cost += abs(shares * px - old.get(s, 0.0)) * FEE
+        new_h[s] = {"shares": shares, "peak": px, "entry": px}
     for s, v in old.items():
         if s not in new_h:
             cost += v * FEE
-    invested = sum(v["shares"] * v["entry"] for v in new_h.values())
-    g["holdings"], g["cash"] = new_h, equity - invested - cost
+    g["holdings"], g["cash"] = new_h, float(real_cash) * scale - cost
 
 
 def run(today=None):
@@ -70,7 +76,7 @@ def run(today=None):
         days = sorted({d for s in prices.values() for d in s if (not g["last_day"] or d > g["last_day"])})
         if not g["last_day"]:                                    # first run: exact copy of the real account today
             day = days[-1] if days else today.isoformat()
-            mirror(g, pos, real_eq, real_eq, day, prices)
+            mirror(g, pos, acct["cash"], real_eq, real_eq, day, prices)
             g["last_day"], g["last_sync"] = day, day
             st["log"].append({"day": day, "group": gname, "event": "START", "equity": real_eq})
             g["history"].append({"day": day, "shadow": real_eq, "real": real_eq})
@@ -81,7 +87,7 @@ def run(today=None):
             # matching when CAPM2 actually rebalances); only on the latest day, after the real rebalance ran
             new_week = date.fromisoformat(day).isocalendar()[:2] != date.fromisoformat(g["last_sync"]).isocalendar()[:2]
             if new_week and day == days[-1]:
-                mirror(g, pos, real_eq, eq, day, prices)           # weekly: copy CAPM2's new weights
+                mirror(g, pos, acct["cash"], real_eq, eq, day, prices)           # weekly: copy CAPM2's new weights
                 g["last_sync"] = day
                 st["log"].append({"day": day, "group": gname, "event": "WEEKLY_SYNC", "equity": eq})
             for s, v in list(g["holdings"].items()):

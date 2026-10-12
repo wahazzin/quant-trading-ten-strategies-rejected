@@ -7,13 +7,23 @@ import capm2_shadow_stop as S  # noqa: E402
 
 
 class TestShadow(unittest.TestCase):
-    def test_mirror_copies_weights_with_own_equity(self):
+    def test_mirror_copies_holdings_with_own_equity(self):
         g = {"cash": 0.0, "holdings": {}}
-        pos = [{"symbol": "A", "market_value": "600", "current_price": "10"}, {"symbol": "B", "market_value": "400", "current_price": "20"}]
-        S.mirror(g, pos, 1000.0, 2000.0, "d", {"A": {"d": 10.0}, "B": {"d": 20.0}})
+        pos = [{"symbol": "A", "qty": "60", "market_value": "600", "current_price": "10"},
+               {"symbol": "B", "qty": "20", "market_value": "400", "current_price": "20"}]
+        S.mirror(g, pos, "0", 1000.0, 2000.0, "d", {"A": {"d": 10.0}, "B": {"d": 20.0}})
         self.assertAlmostEqual(g["holdings"]["A"]["shares"], 120.0)
         self.assertAlmostEqual(g["holdings"]["B"]["shares"], 40.0)
-        self.assertLess(g["cash"], 0.01)                       # fully invested, minus tiny fees
+        self.assertLess(abs(g["cash"]), 0.1)                   # fully invested, minus tiny fees
+
+    def test_mirror_is_exact_copy_when_live_price_differs_from_close(self):
+        # 2026-10-08 bug: start ran pre-market; live price 235.4 vs last close 237.4 -> copy held fewer shares.
+        g = {"cash": 0.0, "holdings": {}}
+        pos = [{"symbol": "N", "qty": "171", "market_value": str(171 * 235.4), "current_price": "235.4"}]
+        eq = 171 * 235.4 + 500.0
+        S.mirror(g, pos, "500", eq, eq, "d", {"N": {"d": 237.4}})
+        self.assertAlmostEqual(g["holdings"]["N"]["shares"], 171.0)   # same share count as the real account
+        self.assertAlmostEqual(g["cash"], 500.0 - 171 * 237.4 * S.FEE, delta=0.01)  # only the copy fee
 
     def test_never_writes_to_broker(self):
         src = open(S.__file__).read()
@@ -34,8 +44,8 @@ class TestStopFires(unittest.TestCase):
         px = {"OTLY": {"2026-10-06": 10.0}}
         def fake_get(url, h, **p):
             if url.endswith("/v2/account"):
-                return {"equity": "1000"}
-            return [{"symbol": "OTLY", "market_value": "1000", "current_price": "10"}]
+                return {"equity": "1000", "cash": "0"}
+            return [{"symbol": "OTLY", "qty": "100", "market_value": "1000", "current_price": "10"}]
         orig_get, orig_closes = S.get, S.closes
         S.get = fake_get
         S.closes = lambda h, syms, start: {s: dict(px.get(s, {})) for s in syms}
