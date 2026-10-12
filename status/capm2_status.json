@@ -1,33 +1,25 @@
 {
- "generated_utc": "2026-10-10 01:11",
+ "generated_utc": "2026-10-12 15:44",
  "accounts": {
   "US": {
-   "equity": 101749.36,
-   "last_equity": 101874.5,
+   "equity": 101978.84,
+   "last_equity": 101778.86,
    "cash": 20505.92,
    "positions": [
     {
      "symbol": "NVDA",
      "qty": 171.0,
-     "market_value": 39215.43,
-     "unrealized_plpc": 0.01346
+     "market_value": 38637.45,
+     "unrealized_plpc": -0.00148
     },
     {
      "symbol": "XOM",
      "qty": 249.0,
-     "market_value": 42028.0128,
-     "unrealized_plpc": 0.03498
+     "market_value": 42835.47,
+     "unrealized_plpc": 0.05486
     }
    ],
    "equity_history": [
-    [
-     1783641600,
-     99487.07
-    ],
-    [
-     1783728000,
-     99487.07
-    ],
     [
      1783987200,
      99487.07
@@ -279,42 +271,38 @@
     [
      1791504000,
      101874.5
+    ],
+    [
+     1791590400,
+     101778.86
     ]
    ]
   },
   "SE": {
-   "equity": 88394.05,
-   "last_equity": 87707.68,
+   "equity": 88025.89,
+   "last_equity": 88394.05,
    "cash": -75.06,
    "positions": [
     {
      "symbol": "ALV",
      "qty": 152.0,
-     "market_value": 16683.52,
-     "unrealized_plpc": -0.03991
+     "market_value": 16688.08,
+     "unrealized_plpc": -0.03965
     },
     {
      "symbol": "OTLY",
      "qty": 3281.0,
-     "market_value": 34745.79,
-     "unrealized_plpc": -0.20321
+     "market_value": 34352.07,
+     "unrealized_plpc": -0.21224
     },
     {
      "symbol": "SPOT",
      "qty": 70.0,
-     "market_value": 37039.8,
-     "unrealized_plpc": -0.04679
+     "market_value": 37060.8,
+     "unrealized_plpc": -0.04625
     }
    ],
    "equity_history": [
-    [
-     1783641600,
-     100000.0
-    ],
-    [
-     1783728000,
-     100000.0
-    ],
     [
      1783987200,
      100000.0
@@ -566,19 +554,15 @@
     [
      1791504000,
      87707.68
+    ],
+    [
+     1791590400,
+     88394.05
     ]
    ]
   }
  },
  "spy": [
-  [
-   "2026-07-07",
-   747.77
-  ],
-  [
-   "2026-07-08",
-   745.28
-  ],
   [
    "2026-07-09",
    751.55
@@ -842,6 +826,10 @@
   [
    "2026-10-09",
    778.51
+  ],
+  [
+   "2026-10-12",
+   778.49
   ]
  ]
 }
