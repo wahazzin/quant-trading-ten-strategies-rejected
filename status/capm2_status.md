@@ -1,11 +1,11 @@
-# CAPM2 status (2026-10-13 02:42 UTC) — read-only snapshot
+# CAPM2 status (2026-10-14 00:34 UTC) — read-only snapshot
 
 ## US account
-- Equity 101,729.48 · cash 20,505.92 · 7d +0.40% · 30d +2.50% · drawdown from peak -0.63%
-- Positions: NVDA 38,256 (-1.1%), XOM 42,967 (+5.8%)
+- Equity 103,108.16 · cash 20,505.92 · 7d +0.91% · 30d +5.73% · drawdown from peak +0.00%
+- Positions: NVDA 39,251 (+1.4%), XOM 43,351 (+6.8%)
 
 ## SE account
-- Equity 88,606.01 · cash -75.06 · 7d +4.13% · 30d -9.03% · drawdown from peak -11.39%
-- Positions: ALV 16,788 (-3.4%), OTLY 35,008 (-19.7%), SPOT 36,884 (-5.1%)
+- Equity 89,839.80 · cash -75.06 · 7d +4.97% · 30d -8.88% · drawdown from peak -10.16%
+- Positions: ALV 17,296 (-0.5%), OTLY 35,697 (-18.1%), SPOT 36,922 (-5.0%)
 
-SPY (IEX closes): 7d +0.39% · 30d +2.27%
+SPY (IEX closes): 7d -0.14% · 30d +2.27%
