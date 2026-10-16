@@ -2,7 +2,7 @@
 
 Started 2026-10-08. Pre-registered in RESEARCH_LOG.md. Interim numbers are informational only.
 
-- **US**: shadow 101,170.61 (-1.05%) vs real CAPM2 101,056.94 (-1.16%) since start; shadow holds NVDA, XOM
-- **SE**: shadow 91,484.54 (+6.07%) vs real CAPM2 91,962.06 (+6.63%) since start; shadow holds ALV, OTLY, SPOT
+- **US**: shadow 101,689.49 (-0.55%) vs real CAPM2 101,580.81 (-0.65%) since start; shadow holds NVDA, XOM
+- **SE**: shadow 91,557.50 (+6.16%) vs real CAPM2 91,356.67 (+5.92%) since start; shadow holds ALV, OTLY, SPOT
 
 Stops fired: 0
