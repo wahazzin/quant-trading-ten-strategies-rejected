@@ -1,33 +1,25 @@
 {
- "generated_utc": "2026-10-16 23:50",
+ "generated_utc": "2026-10-19 13:37",
  "accounts": {
   "US": {
-   "equity": 101580.81,
-   "last_equity": 101147.57,
+   "equity": 101846.6,
+   "last_equity": 101688.17,
    "cash": 20505.92,
    "positions": [
     {
      "symbol": "NVDA",
      "qty": 171.0,
-     "market_value": 36559.5948,
-     "unrealized_plpc": -0.05518
+     "market_value": 36900.09,
+     "unrealized_plpc": -0.04638
     },
     {
      "symbol": "XOM",
      "qty": 249.0,
-     "market_value": 44515.2987,
-     "unrealized_plpc": 0.09623
+     "market_value": 44444.01,
+     "unrealized_plpc": 0.09447
     }
    ],
    "equity_history": [
-    [
-     1784246400,
-     99487.07
-    ],
-    [
-     1784332800,
-     99487.07
-    ],
     [
      1784592000,
      99487.07
@@ -279,42 +271,38 @@
     [
      1792108800,
      101147.57
+    ],
+    [
+     1792195200,
+     101688.17
     ]
    ]
   },
   "SE": {
-   "equity": 91356.67,
-   "last_equity": 91535.53,
+   "equity": 90681.78,
+   "last_equity": 91598.87,
    "cash": -75.06,
    "positions": [
     {
      "symbol": "ALV",
      "qty": 152.0,
-     "market_value": 17630.48,
-     "unrealized_plpc": 0.01458
+     "market_value": 17636.56,
+     "unrealized_plpc": 0.01493
     },
     {
      "symbol": "OTLY",
      "qty": 3281.0,
-     "market_value": 36911.25,
-     "unrealized_plpc": -0.15355
+     "market_value": 36353.48,
+     "unrealized_plpc": -0.16634
     },
     {
      "symbol": "SPOT",
      "qty": 70.0,
-     "market_value": 36890.0,
-     "unrealized_plpc": -0.05065
+     "market_value": 36766.8,
+     "unrealized_plpc": -0.05382
     }
    ],
    "equity_history": [
-    [
-     1784246400,
-     100000.0
-    ],
-    [
-     1784332800,
-     100000.0
-    ],
     [
      1784592000,
      100000.0
@@ -566,23 +554,15 @@
     [
      1792108800,
      91535.53
+    ],
+    [
+     1792195200,
+     91598.87
     ]
    ]
   }
  },
  "spy": [
-  [
-   "2026-07-13",
-   749.13
-  ],
-  [
-   "2026-07-14",
-   751.94
-  ],
-  [
-   "2026-07-15",
-   754.77
-  ],
   [
    "2026-07-16",
    750.87
@@ -846,6 +826,10 @@
   [
    "2026-10-16",
    763.335
+  ],
+  [
+   "2026-10-19",
+   767.7
   ]
  ]
 }
