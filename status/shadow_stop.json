@@ -2,21 +2,21 @@
  "start": "2026-10-08",
  "groups": {
   "US": {
-   "cash": 20511.43022770573,
+   "cash": 20504.853101642668,
    "holdings": {
     "NVDA": {
-     "shares": 171.04595988772385,
-     "peak": 221.9,
-     "entry": 215.74
+     "shares": 170.99110466605225,
+     "peak": 228.5,
+     "entry": 225.95
     },
     "XOM": {
-     "shares": 249.0669240470365,
-     "peak": 183.21,
-     "entry": 178.6
+     "shares": 248.98704714530416,
+     "peak": 179.01,
+     "entry": 172.03
     }
    },
-   "last_day": "2026-10-23",
-   "last_sync": "2026-10-19",
+   "last_day": "2026-10-16",
+   "last_sync": "2026-10-12",
    "history": [
     {
      "day": "2026-10-07",
@@ -57,55 +57,30 @@
      "day": "2026-10-16",
      "shadow": 101689.494697742,
      "real": 101580.81
-    },
-    {
-     "day": "2026-10-19",
-     "shadow": 101896.23824868399,
-     "real": 101836.19
-    },
-    {
-     "day": "2026-10-20",
-     "shadow": 101831.5108564949,
-     "real": 102012.95
-    },
-    {
-     "day": "2026-10-21",
-     "shadow": 102820.36656108791,
-     "real": 101886.75
-    },
-    {
-     "day": "2026-10-22",
-     "shadow": 101200.5913290143,
-     "real": 102596.05
-    },
-    {
-     "day": "2026-10-23",
-     "shadow": 102237.09983787077,
-     "real": 102607.99
     }
    ]
   },
   "SE": {
-   "cash": -75.54821276659797,
+   "cash": -74.98374446018828,
    "holdings": {
     "ALV": {
-     "shares": 152.7493889572267,
-     "peak": 118.96,
-     "entry": 115.7
+     "shares": 151.8369772338093,
+     "peak": 116.05,
+     "entry": 109.725
     },
     "OTLY": {
-     "shares": 3297.1759550569786,
-     "peak": 12.9,
-     "entry": 11.08
+     "shares": 3277.481067790318,
+     "peak": 11.265,
+     "entry": 10.445
     },
     "SPOT": {
-     "shares": 70.34511333556492,
-     "peak": 584.14,
-     "entry": 525.07
+     "shares": 69.9249237260964,
+     "peak": 533.32,
+     "entry": 529.46
     }
    },
-   "last_day": "2026-10-23",
-   "last_sync": "2026-10-19",
+   "last_day": "2026-10-16",
+   "last_sync": "2026-10-12",
    "history": [
     {
      "day": "2026-10-07",
@@ -146,31 +121,6 @@
      "day": "2026-10-16",
      "shadow": 91557.49823345189,
      "real": 91356.67
-    },
-    {
-     "day": "2026-10-19",
-     "shadow": 91066.37433072094,
-     "real": 90681.78
-    },
-    {
-     "day": "2026-10-20",
-     "shadow": 97416.06593665377,
-     "real": 96206.46
-    },
-    {
-     "day": "2026-10-21",
-     "shadow": 94931.29564620735,
-     "real": 95108.92
-    },
-    {
-     "day": "2026-10-22",
-     "shadow": 99039.12868734336,
-     "real": 94753.36
-    },
-    {
-     "day": "2026-10-23",
-     "shadow": 97807.09432308238,
-     "real": 94694.1
     }
    ]
   }
@@ -240,6 +190,93 @@
    "group": "SE",
    "event": "WEEKLY_SYNC",
    "equity": 91128.85845101092
+  },
+  {
+   "day": "2026-10-26",
+   "group": "US",
+   "event": "CORRECTION",
+   "note": "rewound to the 2026-10-16 close and replayed by the next run with the fixed code. Two bugs: (1) the Monday 06:20 snapshot started 7h late (13:37 UTC, 7 min after the open) and booked the partial 2026-10-19 bar as that day's close; (2) it re-copied CAPM2 on Monday 10-19, but CAPM2's real rebalance ran on Tuesday 10-20 (both Monday weekly slots started after the close), so the shadow kept LAST week's holdings all week (US NVDA/XOM, SE ALV/OTLY/SPOT vs real LLY/NVDA/WMT/XOM and OTLY+cash). Rule unchanged; replay applies the same fixed rule day by day. Values before correction kept here.",
+   "before": {
+    "cash": 20511.43022770573,
+    "shares": {
+     "NVDA": 171.04595988772385,
+     "XOM": 249.0669240470365
+    },
+    "last_day": "2026-10-23",
+    "last_sync": "2026-10-19",
+    "last_shadow": 102237.09983787077,
+    "history_10_19_to_10_23": [
+     {
+      "day": "2026-10-19",
+      "shadow": 101896.23824868399,
+      "real": 101836.19
+     },
+     {
+      "day": "2026-10-20",
+      "shadow": 101831.5108564949,
+      "real": 102012.95
+     },
+     {
+      "day": "2026-10-21",
+      "shadow": 102820.36656108791,
+      "real": 101886.75
+     },
+     {
+      "day": "2026-10-22",
+      "shadow": 101200.5913290143,
+      "real": 102596.05
+     },
+     {
+      "day": "2026-10-23",
+      "shadow": 102237.09983787077,
+      "real": 102607.99
+     }
+    ]
+   }
+  },
+  {
+   "day": "2026-10-26",
+   "group": "SE",
+   "event": "CORRECTION",
+   "note": "rewound to the 2026-10-16 close and replayed by the next run with the fixed code. Two bugs: (1) the Monday 06:20 snapshot started 7h late (13:37 UTC, 7 min after the open) and booked the partial 2026-10-19 bar as that day's close; (2) it re-copied CAPM2 on Monday 10-19, but CAPM2's real rebalance ran on Tuesday 10-20 (both Monday weekly slots started after the close), so the shadow kept LAST week's holdings all week (US NVDA/XOM, SE ALV/OTLY/SPOT vs real LLY/NVDA/WMT/XOM and OTLY+cash). Rule unchanged; replay applies the same fixed rule day by day. Values before correction kept here.",
+   "before": {
+    "cash": -75.54821276659797,
+    "shares": {
+     "ALV": 152.7493889572267,
+     "OTLY": 3297.1759550569786,
+     "SPOT": 70.34511333556492
+    },
+    "last_day": "2026-10-23",
+    "last_sync": "2026-10-19",
+    "last_shadow": 97807.09432308238,
+    "history_10_19_to_10_23": [
+     {
+      "day": "2026-10-19",
+      "shadow": 91066.37433072094,
+      "real": 90681.78
+     },
+     {
+      "day": "2026-10-20",
+      "shadow": 97416.06593665377,
+      "real": 96206.46
+     },
+     {
+      "day": "2026-10-21",
+      "shadow": 94931.29564620735,
+      "real": 95108.92
+     },
+     {
+      "day": "2026-10-22",
+      "shadow": 99039.12868734336,
+      "real": 94753.36
+     },
+     {
+      "day": "2026-10-23",
+      "shadow": 97807.09432308238,
+      "real": 94694.1
+     }
+    ]
+   }
   }
  ]
 }
