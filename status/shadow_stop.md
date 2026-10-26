@@ -2,5 +2,7 @@
 
 Started 2026-10-08. Pre-registered in RESEARCH_LOG.md. Interim numbers are informational only.
 
-**Correction 2026-10-26:** state rewound to the 2026-10-16 close; the next run replays 2026-10-19 onward with the
-fixed weekly re-copy (see RESEARCH_LOG.md, "Fix (2026-10-26)"). Numbers appear again after that run.
+- **US**: shadow 102,356.49 (+0.11%) vs real CAPM2 102,406.54 (+0.16%) since start; shadow holds LLY, NVDA, WMT, XOM
+- **SE**: shadow 93,906.12 (+8.88%) vs real CAPM2 94,160.76 (+9.18%) since start; shadow holds OTLY
+
+Stops fired: 0
