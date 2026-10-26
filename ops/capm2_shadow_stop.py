@@ -4,8 +4,10 @@ one extra rule -- a 15% trailing stop per holding. READ-ONLY on the broker (GET 
 
 Rule (fixed): each trading day after the close, for every name the shadow holds: peak = highest daily close since
 the shadow bought it; if today's close <= 85% of that peak, the shadow sells it at today's close and holds the cash
-until the next weekly rebalance. On the first trading day of each week (after CAPM2's real rebalance) it re-copies CAPM2's real
-holdings (share counts + cash, scaled to its own equity). Costs: 0.0045% per side (Alpaca ~0.009% round trip, as CAPM2's own cost model).
+until the next weekly rebalance. Once per week, at the close of the first day on which CAPM2's real rebalance has
+filled (Monday normally, Tuesday if Monday was a holiday or the job ran late; Wednesday at the latest), it re-copies
+CAPM2's real holdings as of that close (share counts + cash, scaled to its own equity; rebuilt from the account's
+FILL activities, GET only). A trading day whose session has not closed yet is never processed (partial bar). Costs: 0.0045% per side (Alpaca ~0.009% round trip, as CAPM2's own cost model).
 State: status/shadow_stop.json (capm-status branch). Report: status/shadow_stop.md
 """
 import json
@@ -33,6 +35,69 @@ def closes(h, symbols, start):
         bars = get(f"{DATA}/v2/stocks/{s}/bars", h, timeframe="1Day", start=start, feed="iex", limit=1000).get("bars", [])
         out[s] = {b["t"][:10]: b["c"] for b in bars}
     return out
+
+
+def session_open_day(clock):
+    """The exchange date (New York) whose session has NOT finished yet, or None. Alpaca's daily bar for that day is
+    partial (fixed 2026-10-26: the Monday 06:20 snapshot started 7h late, at 13:37 UTC = 7 minutes after the open,
+    and the shadow booked the 2026-10-19 opening price as that day's 'close' and never revisited it)."""
+    if not clock:
+        return None
+    ts, nc = str(clock.get("timestamp", ""))[:10], str(clock.get("next_close", ""))[:10]
+    return ts if ts and ts == nc else None
+
+
+def fills_since(h, start_day):
+    """Real-account FILL activities from start_day 00:00 UTC on (GET only; account activities, not orders)."""
+    out, token = [], None
+    while True:
+        p = {"activity_types": "FILL", "after": f"{start_day}T00:00:00Z", "direction": "asc", "page_size": 100}
+        if token:
+            p["page_token"] = token
+        page = get(f"{PAPER}/v2/account/activities", h, **p)
+        out += page
+        if len(page) < 100:
+            return out
+        token = page[-1]["id"]
+
+
+def real_as_of(day, positions, cash, fills, prices):
+    """Real account (positions as dicts, cash, equity) at `day`'s close, rebuilt from the CURRENT positions/cash by
+    undoing every fill made after that day. Lets the weekly re-copy happen on the right day even when it is
+    processed later (fixed 2026-10-26: CAPM2's rebalance ran on Tuesday 2026-10-20 because GitHub started both Monday
+    slots after the close, but the shadow had already re-copied on Monday 10-19, i.e. last week's holdings, and kept
+    them all week)."""
+    qty = {p["symbol"]: float(p["qty"]) for p in positions}
+    cash = float(cash)
+    for f in fills:
+        if f["transaction_time"][:10] <= day:
+            continue
+        q, px = float(f["qty"]), float(f["price"])
+        sign = 1 if f["side"] == "buy" else -1               # undo: a later buy added shares and spent cash
+        qty[f["symbol"]] = qty.get(f["symbol"], 0.0) - sign * q
+        cash += sign * q * px
+    pos, eq = [], cash
+    for s, q in sorted(qty.items()):
+        if abs(q) < 1e-9:
+            continue
+        px = prices.get(s, {}).get(day)
+        if px is None:
+            px = next((float(p["current_price"]) for p in positions if p["symbol"] == s), 0.0)
+        pos.append({"symbol": s, "qty": str(q), "market_value": str(q * px), "current_price": str(px)})
+        eq += q * px
+    return pos, cash, eq
+
+
+def week_start(day):
+    d = date.fromisoformat(day)
+    return (d - timedelta(days=d.weekday())).isoformat()
+
+
+def rebalanced_by(day, fills):
+    """True once the real account has traded in `day`'s ISO week (on or before `day`), i.e. CAPM2's weekly
+    rebalance has run; from Wednesday on we sync anyway (a week where the rebalance needed no orders)."""
+    ws = week_start(day)
+    return date.fromisoformat(day).weekday() >= 2 or any(ws <= f["transaction_time"][:10] <= day for f in fills)
 
 
 def mirror(g, real_positions, real_cash, real_equity, equity, px_day, prices):
@@ -70,10 +135,21 @@ def run(today=None):
         real_eq = float(acct["equity"])
         g = st["groups"].setdefault(gname, {"cash": 0.0, "holdings": {}, "last_day": None, "last_sync": None,
                                              "history": []})
-        syms = sorted(set(g["holdings"]) | {p["symbol"] for p in pos})
+        try:
+            clock = get(f"{PAPER}/v2/clock", h)
+        except Exception:  # noqa: BLE001
+            clock = None
+        unfinished = session_open_day(clock)
         start = (date.fromisoformat(g["last_day"]) if g["last_day"] else today - timedelta(days=7)).isoformat()
+        try:
+            fills = fills_since(h, week_start(start)) if g["last_day"] else []
+        except Exception as e:  # noqa: BLE001  -- skip this run; the next one catches up (last_day not advanced)
+            print(f"WARNING {gname}: could not read fills ({type(e).__name__}); shadow not updated this run")
+            continue
+        syms = sorted(set(g["holdings"]) | {p["symbol"] for p in pos} | {f["symbol"] for f in fills})
         prices = closes(h, syms, start) if syms else {}
-        days = sorted({d for s in prices.values() for d in s if (not g["last_day"] or d > g["last_day"])})
+        days = sorted({d for s in prices.values() for d in s if (not g["last_day"] or d > g["last_day"])
+                       and d != unfinished and d <= today.isoformat()})
         if not g["last_day"]:                                    # first run: exact copy of the real account today
             day = days[-1] if days else today.isoformat()
             mirror(g, pos, acct["cash"], real_eq, real_eq, day, prices)
@@ -83,11 +159,12 @@ def run(today=None):
             continue
         for day in days:
             eq = g["cash"] + sum(v["shares"] * prices.get(s, {}).get(day, v["peak"]) for s, v in g["holdings"].items())
-            # weekly re-copy on the first trading day of each week (Monday, or Tuesday after a holiday Monday,
-            # matching when CAPM2 actually rebalances); only on the latest day, after the real rebalance ran
+            r_pos, r_cash, r_eq = real_as_of(day, pos, acct["cash"], fills, prices)
+            # weekly re-copy: once per ISO week, at the close of the first day on which CAPM2's real rebalance has
+            # run (Monday normally; Tuesday when Monday was a holiday or GitHub started the job too late)
             new_week = date.fromisoformat(day).isocalendar()[:2] != date.fromisoformat(g["last_sync"]).isocalendar()[:2]
-            if new_week and day == days[-1]:
-                mirror(g, pos, acct["cash"], real_eq, eq, day, prices)           # weekly: copy CAPM2's new weights
+            if new_week and rebalanced_by(day, fills):
+                mirror(g, r_pos, r_cash, r_eq, eq, day, prices)            # weekly: copy CAPM2's new weights
                 g["last_sync"] = day
                 st["log"].append({"day": day, "group": gname, "event": "WEEKLY_SYNC", "equity": eq})
             for s, v in list(g["holdings"].items()):
@@ -102,7 +179,7 @@ def run(today=None):
                     st["log"].append({"day": day, "group": gname, "event": "STOP", "symbol": s, "close": c,
                                       "peak": v["peak"], "value": val})
             eq = g["cash"] + sum(v["shares"] * prices.get(s, {}).get(day, v["peak"]) for s, v in g["holdings"].items())
-            g["history"].append({"day": day, "shadow": eq, "real": real_eq if day == days[-1] else None})
+            g["history"].append({"day": day, "shadow": eq, "real": round(r_eq, 2)})
             g["last_day"] = day
     os.makedirs("status", exist_ok=True)
     json.dump(st, open(STATE, "w"), indent=1)

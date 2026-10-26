@@ -776,3 +776,18 @@ although no stop had fired. `mirror()` now copies the real share counts and cash
 State on `capm-status` corrected: no stop had fired, so shadow == real for 2026-10-07..09 (minus the copy fee);
 the pre-correction values are kept in the state log (event CORRECTION). The rule, start date and verdict date
 (2027-04-08) are unchanged. Tests: tests/test_shadow_stop.py.
+
+**Fix (2026-10-26, weekly review): Test 21 shadow copied the wrong week's holdings (week of 2026-10-19).**
+Two bugs in `ops/capm2_shadow_stop.py`, found because the shadow still held NVDA/XOM (US) and ALV/OTLY/SPOT (SE)
+while real CAPM2 held LLY/NVDA/WMT/XOM and OTLY + 60% cash, with no stop fired:
+(1) the Monday 06:20 UTC snapshot started 7h late (13:37 UTC, 7 minutes after the open) and booked the partial
+2026-10-19 daily bar as that day's close, then never revisited it; (2) it did the weekly re-copy on Monday 10-19, but
+CAPM2's real rebalance ran on **Tuesday 2026-10-20 19:01 UTC** (GitHub started both Monday slots after the close:
+20:24 and 21:38 UTC; the gate correctly caught it up on Tuesday), so the shadow kept last week's holdings all week.
+Fix: a day whose session has not closed (Alpaca clock) is never processed; the weekly re-copy happens once per ISO
+week at the close of the first day on which the real account has fills (Wednesday at the latest, for a no-order
+week), using the real holdings *as of that close*, rebuilt from the current positions by undoing later FILL account
+activities (GET only; no orders endpoint). Known edge: a crash-watch sell earlier in the same week than the rebalance
+would trigger the copy early. State on `capm-status` rewound to the 2026-10-16 close (pre-correction values kept in
+the state log, event CORRECTION) so the next run replays 10-19 onward with the same fixed rule. Rule, stop level,
+start date and verdict date (2027-04-08) unchanged. Tests: tests/test_shadow_stop.py (late rebalance, partial bar).
