@@ -791,3 +791,16 @@ activities (GET only; no orders endpoint). Known edge: a crash-watch sell earlie
 would trigger the copy early. State on `capm-status` rewound to the 2026-10-16 close (pre-correction values kept in
 the state log, event CORRECTION) so the next run replays 10-19 onward with the same fixed rule. Rule, stop level,
 start date and verdict date (2027-04-08) unchanged. Tests: tests/test_shadow_stop.py (late rebalance, partial bar).
+
+## 2026-11-02 — Weekly review W45: CAPM2 US account on margin after a refused trim (fix on a branch, not merged)
+
+Rebalance Tue 2026-10-27 19:53 UTC: new US target LLY 10 shares vs 31 held. `check_trade_safety` rule 2 ("refuse
+any trade > 2× the intended size", reference = target for any position the target still holds) refused the
+21-share trim, but the rest of the plan (sell 2 XOM, buy 93 NVDA, buy 59 WMT) was submitted. The US account ended
+124% invested (LLY 41% / XOM 40% / NVDA 32% / WMT 11% of equity) with cash −$25,799. No alert was sent.
+≈ +2.7 pp of the US account's +3.93% week came from the 21 LLY that should have been sold (LLY ≈ 1,283 → 1,414.5).
+Test 21's shadow copied the same holdings, so shadow-vs-real is unaffected. Strategy, weights and targets were
+correct; this is an execution bug. Because the weekly review's standing instructions forbid touching order code
+(and `bot/broker/reconcile.py` is shared with the old static accounts), the fix is on branch
+`fix/capm2-trim-guard` (SELL measured against the held quantity; if any trade is refused, skip that account's BUYs
+for the run and alert on Discord; tests added) and awaits Yassin's approval.
