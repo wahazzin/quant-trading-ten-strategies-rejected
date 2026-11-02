@@ -94,8 +94,8 @@ def check_trade_safety(symbol, target_qty, held, pending, diff):
        unaffected.
 
     2. Refuse any trade whose size exceeds 2x the intended reference
-       size (the target quantity for a new/adjusted position, or the
-       current held size for a full close). Catches gross sizing bugs
+       size (the target quantity for a BUY, the current held size for
+       any SELL -- trim or full close). Catches gross sizing bugs
        independent of direction.
     """
     reasons = []
@@ -106,7 +106,14 @@ def check_trade_safety(symbol, target_qty, held, pending, diff):
             f"(pending={pending:g})"
         )
 
-    reference = target_qty if target_qty > 0 else abs(held)
+    # Reference size: the target for a BUY; the HELD quantity for any SELL (a trim or a full close).
+    # Fixed 2026-11-02: a legitimate trim from 31 to a target of 10 (sell 21) used to be measured
+    # against the target (21 > 2x10) and refused, while the rest of the plan's BUYs still went out
+    # -- the CAPM2 US account ended 124% invested with -25.8k cash (margin) on 2026-10-27.
+    # A sell can never legitimately exceed what is held, so measuring it against `held` keeps the
+    # gross-sizing backstop without blocking normal trims. Full closes are unchanged (reference was
+    # already `held`); trims of more than the held size are still refused.
+    reference = target_qty if diff > 0 else abs(held)
     if reference > 0 and abs(diff) > 2 * reference:
         action = "BUY" if diff > 0 else "SELL"
         reasons.append(

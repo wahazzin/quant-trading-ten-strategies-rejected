@@ -49,7 +49,7 @@ from bot.broker.reconcile import reconcile, execute_plan
 from bot.broker.guard import require_broker
 from bot.strategy.capm2_allocation import compute_weights
 from bot.strategy.capm2_universe import GROUPS
-from bot.monitor.discord_notify import notify_fill
+from bot.monitor.discord_notify import notify_fill, _post
 
 require_broker("alpaca")
 
@@ -182,6 +182,21 @@ for key, spec in GROUPS.items():
         print(f"  *** {len(warnings)} trade(s) REFUSED by the safety check -- manual review needed ***")
         for w in warnings:
             print(f"    WARNING: {w}")
+        # A refused trade means the plan no longer adds up: its BUYs were sized assuming every SELL
+        # goes through. Submitting them anyway put the US account on margin (2026-10-27). So: keep the
+        # SELLS, skip every BUY in this account this run, and alert (added 2026-11-02).
+        skipped = {s: q for s, q in diffs.items() if q > 0}
+        diffs = {s: q for s, q in diffs.items() if q < 0}
+        if skipped:
+            print("  BUYs skipped this run because a trade was refused: "
+                  + ", ".join(f"{s} {q:g}" for s, q in sorted(skipped.items())))
+        if not args.dry_run:
+            try:
+                _post(f"CAPM2 {key}: {len(warnings)} trade(s) refused by the safety check; "
+                      f"BUYs skipped this run ({', '.join(sorted(skipped)) or 'none'}). "
+                      + " | ".join(warnings), "\u26a0\ufe0f")
+            except Exception as e:  # an alert failure must never stop the rebalance
+                print(f"  (Discord alert failed: {e})")
 
     print()
     results = execute_plan(diffs, lambda sym, action, qty: place_order(client, sym, action, qty),
