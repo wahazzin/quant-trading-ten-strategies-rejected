@@ -1,11 +1,11 @@
-# CAPM2 status (2026-10-31 00:59 UTC) — read-only snapshot
+# CAPM2 status (2026-11-02 16:17 UTC) — read-only snapshot
 
 ## US account
-- Equity 106,398.49 · cash -25,799.08 · 7d +3.90% · 30d +6.94% · drawdown from peak +0.00%
-- Positions: LLY 43,850 (+10.2%), NVDA 34,277 (-7.6%), WMT 11,617 (+4.0%), XOM 42,454 (+14.7%)
+- Equity 105,576.29 · cash -25,799.08 · 7d +3.12% · 30d +5.53% · drawdown from peak -0.81%
+- Positions: LLY 43,601 (+9.5%), NVDA 34,645 (-6.6%), WMT 11,830 (+5.9%), XOM 41,300 (+11.6%)
 
 ## SE account
-- Equity 96,427.71 · cash 18,786.75 · 7d +1.77% · 30d +8.21% · drawdown from peak -3.57%
-- Positions: ERIC 37,844 (+0.9%), SPOT 39,797 (+6.7%)
+- Equity 96,081.85 · cash 18,786.75 · 7d +1.47% · 30d +10.09% · drawdown from peak -3.92%
+- Positions: ERIC 37,636 (+0.3%), SPOT 39,659 (+6.3%)
 
-SPY (IEX closes): 7d -0.54% · 30d -0.87%
+SPY (IEX closes): 7d -0.60% · 30d -1.85%
