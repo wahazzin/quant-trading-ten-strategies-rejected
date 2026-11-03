@@ -1,34 +1,34 @@
 {
- "generated_utc": "2026-11-02 16:17",
+ "generated_utc": "2026-11-03 03:02",
  "accounts": {
   "US": {
-   "equity": 105576.29,
+   "equity": 104746.48,
    "last_equity": 106435.23,
    "cash": -25799.08,
    "positions": [
     {
      "symbol": "LLY",
      "qty": 31.0,
-     "market_value": 43601.4287,
-     "unrealized_plpc": 0.09528
+     "market_value": 43654.82,
+     "unrealized_plpc": 0.09662
     },
     {
      "symbol": "NVDA",
      "qty": 167.0,
-     "market_value": 34644.985,
-     "unrealized_plpc": -0.0661
+     "market_value": 34094.72,
+     "unrealized_plpc": -0.08093
     },
     {
      "symbol": "WMT",
      "qty": 94.0,
-     "market_value": 11829.9,
-     "unrealized_plpc": 0.05888
+     "market_value": 12013.2,
+     "unrealized_plpc": 0.07528
     },
     {
      "symbol": "XOM",
      "qty": 227.0,
-     "market_value": 41300.38,
-     "unrealized_plpc": 0.11574
+     "market_value": 40782.82,
+     "unrealized_plpc": 0.10176
     }
    ],
    "equity_history": [
@@ -291,21 +291,21 @@
    ]
   },
   "SE": {
-   "equity": 96081.85,
+   "equity": 95994.42,
    "last_equity": 96391.53,
    "cash": 18786.75,
    "positions": [
     {
      "symbol": "ERIC",
      "qty": 3385.0,
-     "market_value": 37636.461,
-     "unrealized_plpc": 0.00348
+     "market_value": 37409.666,
+     "unrealized_plpc": -0.00256
     },
     {
      "symbol": "SPOT",
      "qty": 67.0,
-     "market_value": 39658.64,
-     "unrealized_plpc": 0.06311
+     "market_value": 39798.0,
+     "unrealized_plpc": 0.06684
     }
    ],
    "equity_history": [
@@ -570,10 +570,6 @@
  },
  "spy": [
   [
-   "2026-07-30",
-   741.63
-  ],
-  [
    "2026-07-31",
    746.79
   ],
@@ -835,7 +831,7 @@
   ],
   [
    "2026-11-02",
-   760.62
+   752.04
   ]
  ]
 }
