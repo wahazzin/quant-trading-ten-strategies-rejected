@@ -2,7 +2,7 @@
 
 Started 2026-10-08. Pre-registered in RESEARCH_LOG.md. Interim numbers are informational only.
 
-- **US**: shadow 104,356.72 (+2.06%) vs real CAPM2 104,531.73 (+2.23%) since start; shadow holds LLY, WMT, XOM
-- **SE**: shadow 95,481.65 (+10.71%) vs real CAPM2 96,056.49 (+11.37%) since start; shadow holds AZN, ERIC, SPOT
+- **US**: shadow 104,100.38 (+1.81%) vs real CAPM2 104,274.05 (+1.98%) since start; shadow holds LLY, WMT, XOM
+- **SE**: shadow 98,585.32 (+14.31%) vs real CAPM2 99,178.36 (+14.99%) since start; shadow holds AZN, ERIC, SPOT
 
 Stops fired: 0
