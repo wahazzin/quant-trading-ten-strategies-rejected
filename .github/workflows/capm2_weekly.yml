@@ -11,6 +11,13 @@ on:
     # after the close). The gate lets a run through only if no run has rebalanced yet this week, so extra
     # slots are harmless and a late/missed Monday is caught up the same day or on Tuesday.
     - cron: "30 17 * * 1,2"
+    # More slots (added 2026-11-09): three weeks in a row the rebalance only got through on TUESDAY minutes before the
+    # close (10-20 19:01, 10-27 19:53 = 7 min before, 11-03 20:47 = 13 min before), because GitHub started Monday slots
+    # 6-8 h late (after the close). Odd minutes avoid GitHub's busiest top-of-hour queue. Harmless: the gate still lets
+    # only one run per week through, and the concurrency group below serialises runs.
+    - cron: "47 14 * * 1,2"
+    - cron: "19 16 * * 1,2"
+    - cron: "53 18 * * 1,2"
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab too
 
 permissions:

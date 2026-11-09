@@ -1,5 +1,5 @@
 """capm2_should_run.py -- read-only gate for the weekly rebalance (added 2026-10-08, hardened 2026-10-12).
-Scheduled Mondays AND Tuesdays at 15:00 and 17:30 UTC (market open all year, US summer and winter time).
+Scheduled Mondays AND Tuesdays at several slots 14:47-18:53 UTC (see capm2_weekly.yml; market open all year).
 Prints RUN only if:
   - the US market is open right now, and
   - CAPM2 has not already rebalanced this ISO week (checked in this workflow's own run history), and

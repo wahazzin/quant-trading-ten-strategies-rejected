@@ -804,3 +804,11 @@ correct; this is an execution bug. Because the weekly review's standing instruct
 (and `bot/broker/reconcile.py` is shared with the old static accounts), the fix is on branch
 `fix/capm2-trim-guard` (SELL measured against the held quantity; if any trade is refused, skip that account's BUYs
 for the run and alert on Discord; tests added) and awaits Yassin's approval.
+
+**Fix (2026-11-09, weekly review W46): more weekly-rebalance slots (scheduling only).** Three weeks running the rebalance
+only got through on Tuesday shortly before the close (10-20 19:01, 10-27 19:53, 11-03 20:47 UTC; the 11-03 SE orders
+for AZN/SPOT were still pending when the run's wait window ended, filled before the close). GitHub started the Monday
+15:00/17:30 slots 6–8 h late (after the close). If Tuesday's slots also land after the close, that week has no
+rebalance. Added Mon/Tue slots at 14:47, 16:19 and 18:53 UTC (odd minutes, away from GitHub's top-of-hour queue).
+The gate (ops/capm2_should_run.py) still lets only one run per ISO week through and the concurrency group serialises
+runs. No strategy, weight, order or rebalance-day rule changed.
