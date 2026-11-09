@@ -1,39 +1,31 @@
 {
- "generated_utc": "2026-11-07 01:08",
+ "generated_utc": "2026-11-09 16:38",
  "accounts": {
   "US": {
-   "equity": 100965.04,
-   "last_equity": 101587.98,
+   "equity": 101801.75,
+   "last_equity": 100876.91,
    "cash": 1100.49,
    "positions": [
     {
      "symbol": "LLY",
      "qty": 29.0,
-     "market_value": 39353.0,
-     "unrealized_plpc": 0.05673
+     "market_value": 40522.28,
+     "unrealized_plpc": 0.08813
     },
     {
      "symbol": "WMT",
      "qty": 231.0,
-     "market_value": 28932.75,
-     "unrealized_plpc": 0.0235
+     "market_value": 28754.88,
+     "unrealized_plpc": 0.01721
     },
     {
      "symbol": "XOM",
      "qty": 190.0,
-     "market_value": 31578.798,
-     "unrealized_plpc": 0.01946
+     "market_value": 31424.1,
+     "unrealized_plpc": 0.01447
     }
    ],
    "equity_history": [
-    [
-     1786060800,
-     99487.07
-    ],
-    [
-     1786147200,
-     99487.07
-    ],
     [
      1786406400,
      99487.07
@@ -285,42 +277,38 @@
     [
      1793926800,
      101587.98
+    ],
+    [
+     1794013200,
+     100876.91
     ]
    ]
   },
   "SE": {
-   "equity": 95727.61,
-   "last_equity": 96742.23,
+   "equity": 96065.03,
+   "last_equity": 95605.89,
    "cash": 634.32,
    "positions": [
     {
      "symbol": "AZN",
      "qty": 204.0,
-     "market_value": 38031.72,
-     "unrealized_plpc": 0.01874
+     "market_value": 38488.5984,
+     "unrealized_plpc": 0.03098
     },
     {
      "symbol": "ERIC",
      "qty": 1847.0,
-     "market_value": 19071.9373,
-     "unrealized_plpc": -0.06806
+     "market_value": 19421.205,
+     "unrealized_plpc": -0.05099
     },
     {
      "symbol": "SPOT",
      "qty": 63.0,
-     "market_value": 37989.63,
-     "unrealized_plpc": 0.08303
+     "market_value": 37520.91,
+     "unrealized_plpc": 0.06966
     }
    ],
    "equity_history": [
-    [
-     1786060800,
-     100000.0
-    ],
-    [
-     1786147200,
-     100000.0
-    ],
     [
      1786406400,
      100000.0
@@ -572,19 +560,15 @@
     [
      1793926800,
      96742.23
+    ],
+    [
+     1794013200,
+     95605.89
     ]
    ]
   }
  },
  "spy": [
-  [
-   "2026-08-04",
-   771.11
-  ],
-  [
-   "2026-08-05",
-   769.79
-  ],
   [
    "2026-08-06",
    768.64
@@ -848,6 +832,10 @@
   [
    "2026-11-06",
    735.4
+  ],
+  [
+   "2026-11-09",
+   749.67
   ]
  ]
 }
