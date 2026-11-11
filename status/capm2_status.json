@@ -1,28 +1,28 @@
 {
- "generated_utc": "2026-11-10 03:46",
+ "generated_utc": "2026-11-11 01:27",
  "accounts": {
   "US": {
-   "equity": 102301.97,
-   "last_equity": 100876.91,
+   "equity": 102717.43,
+   "last_equity": 102373.2,
    "cash": 1100.49,
    "positions": [
     {
      "symbol": "LLY",
      "qty": 29.0,
-     "market_value": 40990.63,
-     "unrealized_plpc": 0.1007
+     "market_value": 41465.65,
+     "unrealized_plpc": 0.11346
     },
     {
      "symbol": "WMT",
      "qty": 231.0,
-     "market_value": 28955.85,
-     "unrealized_plpc": 0.02432
+     "market_value": 28938.0861,
+     "unrealized_plpc": 0.02369
     },
     {
      "symbol": "XOM",
      "qty": 190.0,
-     "market_value": 31255.0,
-     "unrealized_plpc": 0.00901
+     "market_value": 31213.2,
+     "unrealized_plpc": 0.00766
     }
    ],
    "equity_history": [
@@ -281,31 +281,35 @@
     [
      1794013200,
      100876.91
+    ],
+    [
+     1794272400,
+     102373.2
     ]
    ]
   },
   "SE": {
-   "equity": 97279.94,
-   "last_equity": 95605.89,
+   "equity": 96577.3,
+   "last_equity": 97221.38,
    "cash": 634.32,
    "positions": [
     {
      "symbol": "AZN",
      "qty": 204.0,
-     "market_value": 38635.56,
-     "unrealized_plpc": 0.03492
+     "market_value": 38099.04,
+     "unrealized_plpc": 0.02055
     },
     {
      "symbol": "ERIC",
      "qty": 1847.0,
-     "market_value": 19633.61,
-     "unrealized_plpc": -0.04061
+     "market_value": 19652.08,
+     "unrealized_plpc": -0.03971
     },
     {
      "symbol": "SPOT",
      "qty": 63.0,
-     "market_value": 38376.45,
-     "unrealized_plpc": 0.09405
+     "market_value": 38191.86,
+     "unrealized_plpc": 0.08879
     }
    ],
    "equity_history": [
@@ -564,15 +568,15 @@
     [
      1794013200,
      95605.89
+    ],
+    [
+     1794272400,
+     97221.38
     ]
    ]
   }
  },
  "spy": [
-  [
-   "2026-08-07",
-   773.16
-  ],
   [
    "2026-08-10",
    773.02
@@ -832,6 +836,10 @@
   [
    "2026-11-09",
    752.72
+  ],
+  [
+   "2026-11-10",
+   749.93
   ]
  ]
 }
