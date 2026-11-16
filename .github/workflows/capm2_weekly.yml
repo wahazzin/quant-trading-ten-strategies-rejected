@@ -18,6 +18,13 @@ on:
     - cron: "47 14 * * 1,2"
     - cron: "19 16 * * 1,2"
     - cron: "53 18 * * 1,2"
+    # Early slots (added 2026-11-16): in W46 GitHub started ALL ten Mon/Tue slots 5-9 h late (first at 23:35 UTC,
+    # after the close) and the week was skipped. These start in the morning; the gate WAITS (max 5h15m) until 10 min
+    # after the open, so on time = waits, hours late = lands in market hours. Gate rules unchanged (Mon, or Tue
+    # catch-up; one rebalance per week; concurrency group serialises runs).
+    - cron: "47 9 * * 1,2"
+    - cron: "41 10 * * 1,2"
+    - cron: "7 12 * * 1,2"
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab too
 
 permissions:
@@ -31,6 +38,7 @@ concurrency:
 jobs:
   rebalance:
     runs-on: ubuntu-latest
+    timeout-minutes: 350   # the gate may sleep up to 5h15m until the open (early slots)
     steps:
       - uses: actions/checkout@v4
 

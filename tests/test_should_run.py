@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "ops"))
-from capm2_should_run import decide, rebalance_attempted  # noqa: E402
+from capm2_should_run import decide, rebalance_attempted, wait_seconds, MAX_WAIT_S  # noqa: E402
 
 
 class TestGate(unittest.TestCase):
@@ -37,6 +37,21 @@ class TestGate(unittest.TestCase):
         self.assertTrue(rebalance_attempted([("1", "2026-11-02T15:03:00Z", failed)], monday, "9"))  # no auto-retry
         self.assertFalse(rebalance_attempted([("1", "2026-10-26T15:03:00Z", ok)], monday, "9"))     # last week
         self.assertFalse(rebalance_attempted([("9", "2026-11-02T15:03:00Z", ok)], monday, "9"))     # itself
+
+    def test_wait_for_open(self):
+        # 2026-11-16 (winter time): open 14:30 UTC. Early slot started on time at 09:47 -> sleep until ~14:40.
+        utc = timezone.utc
+        opn = datetime(2026, 11, 16, 14, 30, tzinfo=utc)
+        w = wait_seconds(datetime(2026, 11, 16, 9, 47, tzinfo=utc), False, opn)
+        self.assertTrue(0 < w <= MAX_WAIT_S)
+        self.assertEqual(w, (4 * 60 + 43 + 10) * 60)
+        self.assertEqual(wait_seconds(datetime(2026, 11, 16, 6, 0, tzinfo=utc), False, opn), 0)   # too early: SKIP
+        self.assertEqual(wait_seconds(datetime(2026, 11, 16, 15, 0, tzinfo=utc), True, opn), 0)   # already open
+        nxt = datetime(2026, 11, 17, 14, 30, tzinfo=utc)                                          # after the close
+        self.assertEqual(wait_seconds(datetime(2026, 11, 16, 22, 0, tzinfo=utc), False, nxt), 0)  # never overnight
+        self.assertEqual(wait_seconds(datetime(2026, 11, 18, 10, 0, tzinfo=utc),               # Wednesday: never
+                                      False, datetime(2026, 11, 18, 14, 30, tzinfo=utc)), 0)
+        self.assertEqual(wait_seconds(datetime(2026, 11, 16, 14, 35, tzinfo=utc), False, None), 0)
 
 
 if __name__ == "__main__":

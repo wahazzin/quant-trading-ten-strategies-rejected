@@ -812,3 +812,17 @@ for AZN/SPOT were still pending when the run's wait window ended, filled before 
 rebalance. Added Mon/Tue slots at 14:47, 16:19 and 18:53 UTC (odd minutes, away from GitHub's top-of-hour queue).
 The gate (ops/capm2_should_run.py) still lets only one run per ISO week through and the concurrency group serialises
 runs. No strategy, weight, order or rebalance-day rule changed.
+
+## 2026-11-16 — Weekly review W47: week W46 had NO rebalance (all ten Mon/Tue slots started after the close)
+
+Mon 11-09 / Tue 11-10: GitHub started every scheduled capm2_weekly run 5–9 h late — first run Mon 23:35 UTC, then
+23:42, 00:19, 00:46, 01:47, Tue 21:00, 21:13, 21:51, 22:26, 23:49 UTC (US close is 21:00 UTC). All ten: gate
+"SKIP (market closed)", step "Run weekly reallocation" skipped. So ISO week 46 had no rebalance; the accounts kept the
+11-03 targets (US LLY/WMT/XOM, SE AZN/SPOT/ERIC). Not caught up manually: the review never places orders. Test 21's
+shadow copies only real rebalances, so shadow-vs-real is unaffected.
+
+**Fix (scheduling only): early slots + wait-for-open.** New Mon/Tue slots at 09:47, 10:41, 12:07 UTC. If a run starts
+before the open (Mon/Tue only, same UTC day, ≤ 5h15m away), `ops/capm2_should_run.py` now sleeps until 10 min after
+the open, then applies exactly the same gate (Monday; Tuesday only as catch-up; one rebalance per ISO week; history
+check). On-time early slot = waits; a slot that is hours late = lands inside market hours. Job timeout 350 min.
+Test `test_wait_for_open` added. No strategy, weight, order code or rebalance-day rule changed.
