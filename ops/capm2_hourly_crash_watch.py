@@ -32,6 +32,8 @@ import argparse
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from capm2_crash_prices import prior_close, ny_today
 from bot.broker.alpaca_client import AlpacaClient
 from bot.broker.reconcile import reconcile, execute_plan
 from bot.broker.guard import require_broker
@@ -61,9 +63,11 @@ def todays_return(client, ticker):
     end = datetime.now(timezone.utc).date()
     start = end - timedelta(days=5)  # small buffer for weekends/holidays
     bars = client.get_daily_bars(ticker, start, end)
-    if not bars:
+    # bars[-1] is TODAY's in-progress bar during market hours -> use the last bar before today
+    # (fix 2026-11-23, see ops/capm2_crash_prices.py).
+    prev_close = prior_close(bars or [], ny_today())
+    if prev_close is None:
         return None
-    prev_close = bars[-1]["c"]
     try:
         current = client.get_last_price(ticker)
     except Exception as e:

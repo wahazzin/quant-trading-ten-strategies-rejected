@@ -842,3 +842,14 @@ Test `test_wait_for_open` added. No strategy, weight, order code or rebalance-da
 - **Crash watch truly hourly**: each run keeps checking every 60 min while the market is open (max 6 checks); runs
   serialised. Same script and crash rule.
 No strategy, weight, target or rebalance-day rule changed.
+
+## 2026-11-23 — Weekly review (W48): crash watch read ~0% every day (prior-close bug) — fixed
+
+The hourly crash watch (Test 20, rule: cut a name on a ≥ 8% one-day drop AND sentiment ≤ −0.3) computed "today's
+return" as latest trade ÷ `bars[-1]` close. During market hours Alpaca's 1Day bars request with end=today already
+contains **today's in-progress bar** (its close = the latest trade), so it compared the price with itself: every
+in-hours check this week (11-16 → 11-20) logged between −0.24% and +0.11% (ERIC exactly +0.00%), including the week SPY fell −8.4%.
+The rule could never fire. No cut was missed this week (no held name had sentiment ≤ −0.3; lowest ERIC −0.02), but
+it would have been blind in a real crash. Fix: `ops/capm2_crash_prices.py` `prior_close()` uses the last daily bar
+dated before today's New York date. Test: tests/test_crash_prices.py. Thresholds, sentiment veto, order code and
+sizing unchanged.
