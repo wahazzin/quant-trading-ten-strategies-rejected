@@ -25,6 +25,15 @@ class TestShadow(unittest.TestCase):
         self.assertAlmostEqual(g["holdings"]["N"]["shares"], 171.0)   # same share count as the real account
         self.assertAlmostEqual(g["cash"], 500.0 - 171 * 237.4 * S.FEE, delta=0.01)  # only the copy fee
 
+    def test_recopy_keeps_peak_of_names_still_held(self):
+        # prereg: peak = highest close since the shadow BOUGHT it -> a kept name keeps its peak at the Monday re-copy
+        g = {"cash": 0.0, "holdings": {"A": {"shares": 10.0, "peak": 120.0, "entry": 90.0}}}
+        pos = [{"symbol": "A", "qty": "10", "market_value": "1000", "current_price": "100"},
+               {"symbol": "B", "qty": "5", "market_value": "500", "current_price": "100"}]
+        S.mirror(g, pos, "0", 1500.0, 1500.0, "d", {"A": {"d": 100.0}, "B": {"d": 100.0}})
+        self.assertEqual((g["holdings"]["A"]["peak"], g["holdings"]["A"]["entry"]), (120.0, 90.0))
+        self.assertEqual(g["holdings"]["B"]["peak"], 100.0)               # newly bought: new peak
+
     def test_never_writes_to_broker(self):
         src = open(S.__file__).read()
         for bad in ("requests.post", "requests.patch", "requests.delete", "/v2/orders"):

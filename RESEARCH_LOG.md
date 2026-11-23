@@ -853,3 +853,9 @@ The rule could never fire. No cut was missed this week (no held name had sentime
 it would have been blind in a real crash. Fix: `ops/capm2_crash_prices.py` `prior_close()` uses the last daily bar
 dated before today's New York date. Test: tests/test_crash_prices.py. Thresholds, sentiment veto, order code and
 sizing unchanged.
+
+**Fix (2026-11-23, approved by Yassin "fix everything"): Test 21 peaks no longer reset at the weekly re-copy.**
+The pre-registered rule says "peak = highest daily close since the shadow bought it", but `mirror()` gave every name
+a fresh peak at each Monday re-copy, even names the shadow kept holding (raised in review W48, question 1). Now a
+name already held keeps its peak and entry; only names (re)bought start a new peak. Applies from today's state on;
+nothing backfilled. Rule, stop level, verdict date unchanged. Test: test_recopy_keeps_peak_of_names_still_held.

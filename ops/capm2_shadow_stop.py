@@ -116,7 +116,12 @@ def mirror(g, real_positions, real_cash, real_equity, equity, px_day, prices):
         qty = float(p["qty"]) if p.get("qty") is not None else float(p["market_value"]) / float(p["current_price"])
         shares = qty * scale
         cost += abs(shares * px - old.get(s, 0.0)) * FEE
-        new_h[s] = {"shares": shares, "peak": px, "entry": px}
+        prev = g["holdings"].get(s)
+        # Fixed 2026-11-23 (approved by Yassin): the pre-registered rule says "peak = highest close since the shadow
+        # BOUGHT it". A name the shadow already holds at the weekly re-copy was not bought again, so it keeps its
+        # peak (and entry); only names (re)bought now start a new peak. Before, every Monday reset all peaks.
+        new_h[s] = ({"shares": shares, "peak": max(prev["peak"], px), "entry": prev["entry"]} if prev
+                    else {"shares": shares, "peak": px, "entry": px})
     for s, v in old.items():
         if s not in new_h:
             cost += v * FEE
