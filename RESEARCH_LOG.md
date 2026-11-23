@@ -826,3 +826,19 @@ before the open (Mon/Tue only, same UTC day, ≤ 5h15m away), `ops/capm2_should_
 the open, then applies exactly the same gate (Monday; Tuesday only as catch-up; one rebalance per ISO week; history
 check). On-time early slot = waits; a slot that is hours late = lands inside market hours. Job timeout 350 min.
 Test `test_wait_for_open` added. No strategy, weight, order code or rebalance-day rule changed.
+
+## 2026-11-23 — Infrastructure fixes approved by Yassin ("fix everything")
+
+- **Trim-guard fix merged** (branch `fix/capm2-trim-guard`, 19a962d, approved 2026-11-23): SELL trims are measured
+  against the held quantity; if any trade is refused, that account's BUYs are skipped for the run and Discord is
+  alerted. Fixes the W45 margin incident (US account −$25.8k cash). Order sizing/targets unchanged.
+- **W47 rebalance did happen** (Mon 11-16 19:52 UTC: US sell 66 XOM, buy 93 WMT; SE sell 27 ERIC, buy 4 AZN; all
+  filled) — but only because the 09:47 slot started 10 h late and still landed inside market hours. GitHub's delay
+  ranges 0–10 h, so no single slot time is safe. **Chain fix:** a Mon/Tue 00:23 UTC slot; a run that starts more
+  than 5h15m before the open sleeps 5h15m and re-dispatches capm2_weekly (input chain=1, normal gate, not a forced
+  run); the next link waits or chains again, only while the open is later the same UTC day. Test added.
+- **Skipped-week alert** (`ops/capm2_week_check.py`, in capm2_status after each close): from Wednesday, if Mon or Tue
+  traded and no run reached the rebalance step, one Discord alert per week. Test added.
+- **Crash watch truly hourly**: each run keeps checking every 60 min while the market is open (max 6 checks); runs
+  serialised. Same script and crash rule.
+No strategy, weight, target or rebalance-day rule changed.

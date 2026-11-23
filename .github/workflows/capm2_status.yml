@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: write
+  actions: read     # week check reads capm2_weekly run history (GET only)
 
 jobs:
   status:
@@ -44,12 +45,13 @@ jobs:
           CAPM2_SE_KEY_ID: ${{ secrets.CAPM2_SE_KEY_ID }}
           CAPM2_SE_SECRET_KEY: ${{ secrets.CAPM2_SE_SECRET_KEY }}
         run: |
-          python -m unittest tests.test_capm2_status tests.test_shadow_stop -q
+          python -m unittest tests.test_capm2_status tests.test_shadow_stop tests.test_week_check -q
           url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git clone -q --depth 1 --branch capm-status "$url" out 2>/dev/null || { mkdir out && git -C out init -q && git -C out checkout -q -b capm-status; }
           mkdir -p out/status && cp -r out/status/. status/ 2>/dev/null || true
           python ops/capm2_status.py
           python ops/capm2_shadow_stop.py
+          GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" python ops/capm2_week_check.py || echo "week check failed (alert only)"
           cp -r status/. out/status/ && cd out
           git config user.name "capm-status-bot" && git config user.email "actions@github.com"
           git add -A && git commit -q -m "CAPM2 status $(date -u +%Y-%m-%dT%H:%MZ)" || exit 0

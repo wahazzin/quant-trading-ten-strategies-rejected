@@ -25,11 +25,19 @@ on:
     - cron: "47 9 * * 1,2"
     - cron: "41 10 * * 1,2"
     - cron: "7 12 * * 1,2"
-  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab too
+    # Chain slot (added 2026-11-23): on 11-16 the 09:47 slot started at 19:52 (10 h late). A slot just after midnight
+    # survives even a 14 h delay; when it starts on time the gate sleeps 5h15m and re-dispatches this workflow
+    # (input chain=1) until the open is close enough to wait for. Same gate rules for every link.
+    - cron: "23 0 * * 1,2"
+  workflow_dispatch:      # manual run from the Actions tab = forced RUN; chain=1 = automatic next link (normal gate)
+    inputs:
+      chain:
+        required: false
+        default: ""
 
 permissions:
   contents: read
-  actions: read          # the gate reads this workflow's own run history (GET only)
+  actions: write         # the gate reads this workflow's run history; a CHAIN link dispatches this workflow
 
 concurrency:
   group: capm2-weekly
@@ -54,12 +62,19 @@ jobs:
         env:
           CAPM2_US_KEY_ID: ${{ secrets.CAPM2_US_KEY_ID }}
           CAPM2_US_SECRET_KEY: ${{ secrets.CAPM2_US_SECRET_KEY }}
-          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.chain != '1' && '1' || '0' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python -m unittest tests.test_should_run -q
           d=$(python ops/capm2_should_run.py); echo "$d"
           case "$d" in RUN*) echo "go=1" >> $GITHUB_OUTPUT ;; *) echo "go=0" >> $GITHUB_OUTPUT ;; esac
+          case "$d" in CHAIN*) echo "chain=1" >> $GITHUB_OUTPUT ;; esac
+
+      - name: Start the next link (started too early for the open)
+        if: steps.gate.outputs.chain == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run capm2_weekly.yml --ref main -f chain=1
 
       - name: Run weekly reallocation
         if: steps.gate.outputs.go == '1'

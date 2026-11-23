@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "ops"))
-from capm2_should_run import decide, rebalance_attempted, wait_seconds, MAX_WAIT_S  # noqa: E402
+from capm2_should_run import decide, rebalance_attempted, wait_seconds, MAX_WAIT_S, chain_needed  # noqa: E402
 
 
 class TestGate(unittest.TestCase):
@@ -52,6 +52,21 @@ class TestGate(unittest.TestCase):
         self.assertEqual(wait_seconds(datetime(2026, 11, 18, 10, 0, tzinfo=utc),               # Wednesday: never
                                       False, datetime(2026, 11, 18, 14, 30, tzinfo=utc)), 0)
         self.assertEqual(wait_seconds(datetime(2026, 11, 16, 14, 35, tzinfo=utc), False, None), 0)
+
+    def test_chain_when_too_early(self):
+        utc = timezone.utc
+        opn = datetime(2026, 11, 23, 14, 30, tzinfo=utc)
+        self.assertTrue(chain_needed(datetime(2026, 11, 23, 0, 23, tzinfo=utc), False, opn))      # 00:23 slot on time
+        self.assertFalse(chain_needed(datetime(2026, 11, 23, 10, 0, tzinfo=utc), False, opn))     # just wait instead
+        self.assertFalse(chain_needed(datetime(2026, 11, 23, 15, 0, tzinfo=utc), True, opn))      # open: decide now
+        self.assertFalse(chain_needed(datetime(2026, 11, 23, 22, 0, tzinfo=utc), False,           # after close: never
+                                      datetime(2026, 11, 24, 14, 30, tzinfo=utc)))
+        self.assertFalse(chain_needed(datetime(2026, 11, 25, 1, 0, tzinfo=utc), False,            # Wednesday: never
+                                      datetime(2026, 11, 25, 14, 30, tzinfo=utc)))
+        # a chain from 00:23 reaches the open: 00:23 -> +5h15 = 05:38 (chain) -> 10:53 (wait 3h47) -> RUN
+        t = datetime(2026, 11, 23, 5, 38, tzinfo=utc)
+        self.assertTrue(chain_needed(t, False, opn))
+        self.assertGreater(wait_seconds(datetime(2026, 11, 23, 10, 53, tzinfo=utc), False, opn), 0)
 
 
 if __name__ == "__main__":

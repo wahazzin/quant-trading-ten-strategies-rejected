@@ -58,6 +58,22 @@ def wait_seconds(now, is_open, next_open):
     return int(s) if 0 < s <= MAX_WAIT_S else 0
 
 
+CHAIN_SLEEP_S = 5 * 3600 + 15 * 60
+
+
+def chain_needed(now, is_open, next_open):
+    """True when a Mon/Tue run started SO early that today's open is more than MAX_WAIT_S away (seen 2026-11-16: the
+    09:47 slot started at 19:52, i.e. GitHub delays vary from 0 to 10 h, so a slot must be early enough to survive a
+    10 h delay, and an on-time early slot then has to wait longer than one job may live). Such a run sleeps
+    CHAIN_SLEEP_S, prints CHAIN and the workflow re-dispatches itself (workflow_dispatch starts within seconds);
+    the next link waits/chains the same way. Bounded: only while the open is later the SAME UTC day."""
+    if is_open or next_open is None or now.weekday() not in (0, 1):
+        return False
+    if next_open.astimezone(timezone.utc).date() != now.astimezone(timezone.utc).date():
+        return False
+    return (next_open - now).total_seconds() + OPEN_BUFFER_S > MAX_WAIT_S
+
+
 def rebalance_attempted(runs_jobs, monday_start, current_run_id):
     """True if any OTHER run of this workflow since Monday 00:00 UTC got to the rebalance step
     (success OR failure both count as 'attempted' -- a failed run is never retried automatically,
@@ -102,7 +118,12 @@ if __name__ == "__main__":
         print("RUN (manual)"); sys.exit(0)
     clock = requests.get(f"{PAPER}/v2/clock", headers=h, timeout=20).json()
     nxt = clock.get("next_open")
-    w = wait_seconds(now, clock.get("is_open", False), datetime.fromisoformat(nxt.replace("Z", "+00:00")) if nxt else None)
+    nxt_dt = datetime.fromisoformat(nxt.replace("Z", "+00:00")) if nxt else None
+    if chain_needed(now, clock.get("is_open", False), nxt_dt):
+        print(f"Open is more than {MAX_WAIT_S // 60} min away; sleeping {CHAIN_SLEEP_S // 60} min, then re-dispatching", flush=True)
+        time.sleep(CHAIN_SLEEP_S)
+        print("CHAIN (started too early; the workflow starts the next link)"); sys.exit(0)
+    w = wait_seconds(now, clock.get("is_open", False), nxt_dt)
     if w:
         print(f"Market opens later today; waiting {w // 60} min (started early, see docstring)", flush=True)
         time.sleep(w)

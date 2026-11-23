@@ -9,9 +9,18 @@ on:
     - cron: "0 * * * *"
   workflow_dispatch: {}
 
+# Truly hourly while the market is open (changed 2026-11-23): GitHub only started ~1 of the 24 hourly slots per market
+# day inside market hours (W42-W47). Each run now keeps checking every 60 min while the market is open (max 6 checks,
+# ~5 h), so one late-started run covers the rest of the session. Same script, same crash rule; runs are serialised
+# so two loops never check at the same time.
+concurrency:
+  group: capm2-crash-watch
+  cancel-in-progress: false
+
 jobs:
   crash_watch:
     runs-on: ubuntu-latest
+    timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
 
@@ -32,4 +41,11 @@ jobs:
           APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
           APCA_API_SECRET_KEY: ${{ secrets.APCA_API_SECRET_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python -u ops/capm2_hourly_crash_watch.py
+        run: |
+          for i in 1 2 3 4 5 6; do
+            out=$(python -u ops/capm2_hourly_crash_watch.py 2>&1); rc=$?; echo "$out"
+            [ $rc -ne 0 ] && exit $rc
+            # stop when the market is closed (the script says so for both accounts) or after the 6th check
+            echo "$out" | grep -q "Market closed" && break
+            [ $i -lt 6 ] && sleep 3600
+          done
