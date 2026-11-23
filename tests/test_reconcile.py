@@ -135,3 +135,20 @@ class TestSellsBeforeBuys(unittest.TestCase):
         actions = [a for _, a in sent]
         self.assertEqual(actions, ["SELL", "SELL", "BUY", "BUY"])
         self.assertEqual([s for s, _ in sent], ["ABB", "OTLY", "ALV", "SPOT"])
+
+
+class TestLargeTrimAllowed(unittest.TestCase):
+    """2026-10-27: CAPM2 US held 31 LLY, new target 10 -> sell 21 was refused as '> 2x target' while the
+    BUYs still went out (account went to -25.8k cash). A trim is measured against what is held."""
+
+    def test_trim_more_than_twice_target_allowed(self):
+        self.assertEqual(check_trade_safety("LLY", target_qty=10, held=31, pending=0, diff=-21), [])
+        diffs, warnings = reconcile({"LLY"}, {"LLY": 10}, {"LLY": 31}, [])
+        self.assertEqual((diffs, warnings), ({"LLY": -21}, []))
+
+    def test_sell_more_than_twice_held_still_refused(self):
+        self.assertTrue(check_trade_safety("LLY", target_qty=1, held=3, pending=0, diff=-8))
+
+    def test_sell_with_nothing_held_still_refused(self):
+        # pending buys over target, nothing held: rule 1 still refuses (incident #4 shape)
+        self.assertTrue(check_trade_safety("AAA", target_qty=5, held=0, pending=8, diff=-3))
