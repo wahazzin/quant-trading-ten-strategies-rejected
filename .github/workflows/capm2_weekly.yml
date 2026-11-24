@@ -66,7 +66,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python -m unittest tests.test_should_run -q
-          d=$(python ops/capm2_should_run.py); echo "$d"
+          out=$(python ops/capm2_should_run.py); echo "$out"
+          # decision = LAST line only (fixed 2026-11-24: the wait/chain paths print a status line first, so matching
+          # the whole output never saw RUN/CHAIN -> a waited run would never rebalance and a chain never re-started)
+          d=$(printf '%s\n' "$out" | tail -n 1)
           case "$d" in RUN*) echo "go=1" >> $GITHUB_OUTPUT ;; *) echo "go=0" >> $GITHUB_OUTPUT ;; esac
           case "$d" in CHAIN*) echo "chain=1" >> $GITHUB_OUTPUT ;; esac
 

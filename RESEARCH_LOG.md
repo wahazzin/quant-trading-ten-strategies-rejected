@@ -859,3 +859,9 @@ The pre-registered rule says "peak = highest daily close since the shadow bought
 a fresh peak at each Monday re-copy, even names the shadow kept holding (raised in review W48, question 1). Now a
 name already held keeps its peak and entry; only names (re)bought start a new peak. Applies from today's state on;
 nothing backfilled. Rule, stop level, verdict date unchanged. Test: test_recopy_keeps_peak_of_names_still_held.
+
+**Fix (2026-11-24): the gate's decision is read from its LAST output line.** The 11-16/11-23 wait and chain paths print
+a status line before RUN/CHAIN, and the workflow matched the whole output, so a waited run would never have
+rebalanced and the 11-24 chain link (01:53 → 07:11 UTC) ended without re-dispatching. Monday 11-23's slots all started
+after the close again (21:40, 22:13, 23:45 UTC). With this fix the queued Tuesday run waits for the open and
+catches up (gate rule: Tuesday catch-up when Monday never rebalanced). Workflow-only change.
