@@ -1,28 +1,28 @@
 {
- "generated_utc": "2026-11-23 18:28",
+ "generated_utc": "2026-11-24 05:29",
  "accounts": {
   "US": {
-   "equity": 101272.13,
+   "equity": 101540.9,
    "last_equity": 100574.56,
    "cash": 213.81,
    "positions": [
     {
      "symbol": "LLY",
      "qty": 29.0,
-     "market_value": 39550.78,
-     "unrealized_plpc": 0.06204
+     "market_value": 39747.4,
+     "unrealized_plpc": 0.06732
     },
     {
      "symbol": "WMT",
      "qty": 324.0,
-     "market_value": 41872.14,
-     "unrealized_plpc": 0.04197
+     "market_value": 42055.2,
+     "unrealized_plpc": 0.04653
     },
     {
      "symbol": "XOM",
      "qty": 124.0,
-     "market_value": 19635.4,
-     "unrealized_plpc": -0.02802
+     "market_value": 19524.4944,
+     "unrealized_plpc": -0.03351
     }
    ],
    "equity_history": [
@@ -285,27 +285,27 @@
    ]
   },
   "SE": {
-   "equity": 92147.8,
+   "equity": 92745.89,
    "last_equity": 90582.04,
    "cash": 182.95,
    "positions": [
     {
      "symbol": "AZN",
      "qty": 208.0,
-     "market_value": 36822.1776,
-     "unrealized_plpc": -0.03273
+     "market_value": 36824.32,
+     "unrealized_plpc": -0.03268
     },
     {
      "symbol": "ERIC",
      "qty": 1820.0,
-     "market_value": 18582.2,
-     "unrealized_plpc": -0.07852
+     "market_value": 18837.0,
+     "unrealized_plpc": -0.06588
     },
     {
      "symbol": "SPOT",
      "qty": 63.0,
-     "market_value": 36560.475,
-     "unrealized_plpc": 0.04228
+     "market_value": 36901.62,
+     "unrealized_plpc": 0.05201
     }
    ],
    "equity_history": [
@@ -570,10 +570,6 @@
  },
  "spy": [
   [
-   "2026-08-20",
-   762.62
-  ],
-  [
    "2026-08-21",
    765.64
   ],
@@ -835,7 +831,7 @@
   ],
   [
    "2026-11-23",
-   724.01
+   722.56
   ]
  ]
 }
