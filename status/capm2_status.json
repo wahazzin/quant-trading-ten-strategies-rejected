@@ -1,28 +1,28 @@
 {
- "generated_utc": "2026-11-24 05:29",
+ "generated_utc": "2026-11-25 04:32",
  "accounts": {
   "US": {
-   "equity": 101540.9,
-   "last_equity": 100574.56,
-   "cash": 213.81,
+   "equity": 103724.6,
+   "last_equity": 101226.73,
+   "cash": 579.1,
    "positions": [
     {
      "symbol": "LLY",
      "qty": 29.0,
-     "market_value": 39747.4,
-     "unrealized_plpc": 0.06732
+     "market_value": 41006.0,
+     "unrealized_plpc": 0.10112
     },
     {
      "symbol": "WMT",
-     "qty": 324.0,
-     "market_value": 42055.2,
-     "unrealized_plpc": 0.04653
+     "qty": 314.0,
+     "market_value": 41557.9,
+     "unrealized_plpc": 0.06709
     },
     {
      "symbol": "XOM",
-     "qty": 124.0,
-     "market_value": 19524.4944,
-     "unrealized_plpc": -0.03351
+     "qty": 130.0,
+     "market_value": 20581.6,
+     "unrealized_plpc": -0.02707
     }
    ],
    "equity_history": [
@@ -281,31 +281,35 @@
     [
      1795222800,
      100574.56
+    ],
+    [
+     1795482000,
+     101226.73
     ]
    ]
   },
   "SE": {
-   "equity": 92745.89,
-   "last_equity": 90582.04,
-   "cash": 182.95,
+   "equity": 94452.0,
+   "last_equity": 92505.13,
+   "cash": 171.68,
    "positions": [
     {
      "symbol": "AZN",
-     "qty": 208.0,
-     "market_value": 36824.32,
-     "unrealized_plpc": -0.03268
+     "qty": 206.0,
+     "market_value": 37739.2,
+     "unrealized_plpc": 0.00098
     },
     {
      "symbol": "ERIC",
-     "qty": 1820.0,
-     "market_value": 18837.0,
-     "unrealized_plpc": -0.06588
+     "qty": 1857.0,
+     "market_value": 18867.12,
+     "unrealized_plpc": -0.0816
     },
     {
      "symbol": "SPOT",
      "qty": 63.0,
-     "market_value": 36901.62,
-     "unrealized_plpc": 0.05201
+     "market_value": 37674.0,
+     "unrealized_plpc": 0.07403
     }
    ],
    "equity_history": [
@@ -564,15 +568,15 @@
     [
      1795222800,
      90582.04
+    ],
+    [
+     1795482000,
+     92505.13
     ]
    ]
   }
  },
  "spy": [
-  [
-   "2026-08-21",
-   765.64
-  ],
   [
    "2026-08-24",
    763.46
@@ -832,6 +836,10 @@
   [
    "2026-11-23",
    722.56
+  ],
+  [
+   "2026-11-24",
+   718.91
   ]
  ]
 }
