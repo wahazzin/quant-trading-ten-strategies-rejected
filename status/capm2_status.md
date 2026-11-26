@@ -1,11 +1,11 @@
-# CAPM2 status (2026-11-25 04:32 UTC) — read-only snapshot
+# CAPM2 status (2026-11-26 03:44 UTC) — read-only snapshot
 
 ## US account
-- Equity 103,724.60 · cash 579.10 · 7d -0.29% · 30d +0.46% · drawdown from peak -2.55%
-- Positions: LLY 41,006 (+10.1%), WMT 41,558 (+6.7%), XOM 20,582 (-2.7%)
+- Equity 102,933.00 · cash 579.06 · 7d -0.37% · 30d -0.30% · drawdown from peak -3.29%
+- Positions: LLY 40,374 (+8.4%), WMT 41,429 (+6.2%), XOM 20,550 (-2.9%)
 
 ## SE account
-- Equity 94,452.00 · cash 171.68 · 7d -1.74% · 30d +1.01% · drawdown from peak -5.55%
-- Positions: AZN 37,739 (+0.1%), ERIC 18,867 (-8.2%), SPOT 37,674 (+7.4%)
+- Equity 96,157.28 · cash 171.66 · 7d +1.43% · 30d +2.83% · drawdown from peak -3.84%
+- Positions: AZN 37,947 (+0.7%), ERIC 19,201 (-6.5%), SPOT 38,837 (+10.7%)
 
-SPY (IEX closes): 7d -1.84% · 30d -6.05%
+SPY (IEX closes): 7d -1.86% · 30d -6.34%
