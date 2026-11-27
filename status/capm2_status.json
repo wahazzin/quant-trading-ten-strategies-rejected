@@ -1,28 +1,28 @@
 {
- "generated_utc": "2026-11-26 03:44",
+ "generated_utc": "2026-11-27 03:45",
  "accounts": {
   "US": {
-   "equity": 102933.0,
-   "last_equity": 103514.41,
+   "equity": 103302.47,
+   "last_equity": 102933.0,
    "cash": 579.06,
    "positions": [
     {
      "symbol": "LLY",
      "qty": 29.0,
-     "market_value": 40374.38,
-     "unrealized_plpc": 0.08416
+     "market_value": 40567.81,
+     "unrealized_plpc": 0.08935
     },
     {
      "symbol": "WMT",
      "qty": 314.0,
-     "market_value": 41429.16,
-     "unrealized_plpc": 0.06216
+     "market_value": 41432.3,
+     "unrealized_plpc": 0.06225
     },
     {
      "symbol": "XOM",
      "qty": 130.0,
-     "market_value": 20550.4,
-     "unrealized_plpc": -0.02855
+     "market_value": 20723.3,
+     "unrealized_plpc": -0.02037
     }
    ],
    "equity_history": [
@@ -285,12 +285,16 @@
     [
      1795568400,
      103514.41
+    ],
+    [
+     1795654800,
+     102933.0
     ]
    ]
   },
   "SE": {
-   "equity": 96157.28,
-   "last_equity": 94673.02,
+   "equity": 96253.67,
+   "last_equity": 96157.28,
    "cash": 171.66,
    "positions": [
     {
@@ -308,8 +312,8 @@
     {
      "symbol": "SPOT",
      "qty": 63.0,
-     "market_value": 38836.98,
-     "unrealized_plpc": 0.10718
+     "market_value": 38933.37,
+     "unrealized_plpc": 0.10993
     }
    ],
    "equity_history": [
@@ -572,6 +576,10 @@
     [
      1795568400,
      94673.02
+    ],
+    [
+     1795654800,
+     96157.28
     ]
    ]
   }
