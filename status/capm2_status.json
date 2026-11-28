@@ -1,39 +1,31 @@
 {
- "generated_utc": "2026-11-27 03:45",
+ "generated_utc": "2026-11-28 03:29",
  "accounts": {
   "US": {
-   "equity": 103302.47,
+   "equity": 103584.3,
    "last_equity": 102933.0,
    "cash": 579.06,
    "positions": [
     {
      "symbol": "LLY",
      "qty": 29.0,
-     "market_value": 40567.81,
-     "unrealized_plpc": 0.08935
+     "market_value": 40379.02,
+     "unrealized_plpc": 0.08428
     },
     {
      "symbol": "WMT",
      "qty": 314.0,
-     "market_value": 41432.3,
-     "unrealized_plpc": 0.06225
+     "market_value": 41802.82,
+     "unrealized_plpc": 0.07174
     },
     {
      "symbol": "XOM",
      "qty": 130.0,
-     "market_value": 20723.3,
-     "unrealized_plpc": -0.02037
+     "market_value": 20823.4,
+     "unrealized_plpc": -0.01564
     }
    ],
    "equity_history": [
-    [
-     1787702400,
-     99487.07
-    ],
-    [
-     1787788800,
-     99487.07
-    ],
     [
      1787875200,
      99487.07
@@ -293,38 +285,30 @@
    ]
   },
   "SE": {
-   "equity": 96253.67,
+   "equity": 96538.53,
    "last_equity": 96157.28,
    "cash": 171.66,
    "positions": [
     {
      "symbol": "AZN",
      "qty": 206.0,
-     "market_value": 37947.26,
-     "unrealized_plpc": 0.0065
+     "market_value": 37840.14,
+     "unrealized_plpc": 0.00366
     },
     {
      "symbol": "ERIC",
      "qty": 1857.0,
-     "market_value": 19201.38,
-     "unrealized_plpc": -0.06532
+     "market_value": 19442.79,
+     "unrealized_plpc": -0.05357
     },
     {
      "symbol": "SPOT",
      "qty": 63.0,
-     "market_value": 38933.37,
-     "unrealized_plpc": 0.10993
+     "market_value": 39083.94,
+     "unrealized_plpc": 0.11422
     }
    ],
    "equity_history": [
-    [
-     1787702400,
-     100000.0
-    ],
-    [
-     1787788800,
-     100000.0
-    ],
     [
      1787875200,
      100000.0
@@ -585,10 +569,6 @@
   }
  },
  "spy": [
-  [
-   "2026-08-24",
-   763.46
-  ],
   [
    "2026-08-25",
    765.79
@@ -852,6 +832,10 @@
   [
    "2026-11-25",
    716.735
+  ],
+  [
+   "2026-11-27",
+   728.86
   ]
  ]
 }
